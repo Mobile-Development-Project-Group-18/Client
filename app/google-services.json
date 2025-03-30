@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "701122235785",
+    "project_id": "gosell-c5092",
+    "storage_bucket": "gosell-c5092.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:701122235785:android:2884ea1559ac815547e558",
+        "android_client_info": {
+          "package_name": "com.group18.myapplication"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAu11R--UEBqrQrvuLMgKTOQfW1pU-n3uA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
