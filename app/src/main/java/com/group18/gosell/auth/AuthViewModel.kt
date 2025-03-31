@@ -88,7 +88,6 @@ class AuthViewModel : ViewModel() {
                 _authState.value = AuthenticationState.ERROR
                 if (auth.currentUser == null) {
                     _authState.value = AuthenticationState.UNAUTHENTICATED
-                } else {
                 }
             }
         }

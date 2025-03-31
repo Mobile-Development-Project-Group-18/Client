@@ -41,7 +41,7 @@ class HomeViewModel : ViewModel() {
             _error.value = null
             try {
                 val result = db.collection("products")
-                    .orderBy("createdAt", Query.Direction.DESCENDING) // Order by creation time
+                    .orderBy("createdAt", Query.Direction.DESCENDING)
                     .get()
                     .await()
 

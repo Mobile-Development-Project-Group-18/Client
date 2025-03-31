@@ -1,8 +1,10 @@
-package com.group18.gosell.main.ProfileScreen
+package com.group18.gosell.main.profile
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -10,10 +12,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
 import com.group18.gosell.auth.AuthViewModel
+import com.group18.gosell.navigation.Screen
 
 @Composable
-fun ProfileScreen(profileViewModel: ProfileViewModel, authViewModel: AuthViewModel) {
+fun ProfileScreen(profileViewModel: ProfileViewModel, authViewModel: AuthViewModel, mainNavController: NavHostController) {
     val user by profileViewModel.user.collectAsState()
     val isLoading by profileViewModel.isLoading.collectAsState()
     val error by profileViewModel.error.collectAsState()
@@ -55,12 +59,28 @@ fun ProfileScreen(profileViewModel: ProfileViewModel, authViewModel: AuthViewMod
 
         Spacer(modifier = Modifier.weight(1f))
 
-        Button(
-            onClick = { authViewModel.logout() },
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-        ) {
-            Text("Logout")
+
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Button(
+                onClick = { mainNavController.navigate(Screen.UserListings.route) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.AutoMirrored.Filled.List, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
+                Text("Your Listings")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = { authViewModel.logout() },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text("Logout")
+            }
         }
+
         Spacer(modifier = Modifier.height(16.dp))
     }
 }

@@ -1,4 +1,4 @@
-package com.group18.gosell.main.ProfileScreen
+package com.group18.gosell.main.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

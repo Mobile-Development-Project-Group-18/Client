@@ -18,24 +18,23 @@ import androidx.navigation.compose.*
 import com.group18.gosell.auth.AuthViewModel
 import com.group18.gosell.main.home.HomeScreen
 import com.group18.gosell.main.home.HomeViewModel
-import com.group18.gosell.main.ProfileScreen.ProfileScreen
-import com.group18.gosell.main.ProfileScreen.ProfileViewModel
+import com.group18.gosell.main.profile.ProfileScreen
+import com.group18.gosell.main.profile.ProfileViewModel
 import com.group18.gosell.main.sell.SellScreen
 import com.group18.gosell.main.sell.SellViewModel
 import com.group18.gosell.main.wishlist.WishlistScreen
 import com.group18.gosell.navigation.Screen
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(mainNavController: NavHostController, authViewModel: AuthViewModel) { // Accept mainNavController
+fun MainScreen(mainNavController: NavHostController, authViewModel: AuthViewModel) {
     val bottomNavController = rememberNavController()
 
     Scaffold(
         bottomBar = { BottomNavigationBar(navController = bottomNavController) }
     ) { innerPadding ->
         BottomNavGraph(
-            bottomNavController = bottomNavController, // Controls bottom nav internal navigation
-            mainNavController = mainNavController, // Needed to navigate *outside* bottom nav (e.g., to Detail)
+            bottomNavController = bottomNavController,
+            mainNavController = mainNavController,
             modifier = Modifier.padding(innerPadding),
             authViewModel = authViewModel
         )
@@ -111,7 +110,15 @@ fun BottomNavGraph(
         }
         composable(Screen.Profile.route) {
             val profileViewModel: ProfileViewModel = viewModel()
-            ProfileScreen(profileViewModel = profileViewModel, authViewModel = authViewModel)
+            ProfileScreen(profileViewModel = profileViewModel, authViewModel = authViewModel, mainNavController = mainNavController)
+        }
+        composable(Screen.Profile.route) {
+            val profileViewModel: ProfileViewModel = viewModel()
+            ProfileScreen(
+                profileViewModel = profileViewModel,
+                authViewModel = authViewModel,
+                mainNavController = mainNavController
+            )
         }
 
         composable(Screen.Wishlist.route) {

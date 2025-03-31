@@ -17,7 +17,8 @@ import com.group18.gosell.auth.AuthViewModel
 import com.group18.gosell.auth.LoginScreen
 import com.group18.gosell.auth.SignupScreen
 import com.group18.gosell.main.MainScreen
-import com.group18.gosell.main.detail.ProductDetailScreen // Import Detail Screen
+import com.group18.gosell.main.detail.ProductDetailScreen
+import com.group18.gosell.main.listings.UserListingsScreen
 
 @Composable
 fun AppNavigation() {
@@ -25,7 +26,7 @@ fun AppNavigation() {
     val authViewModel: AuthViewModel = viewModel()
     val authState by authViewModel.authState.collectAsState()
 
-    val startDestination = remember(FirebaseAuth.getInstance().currentUser) { // Remember start destination based on initial state
+    val startDestination = remember(FirebaseAuth.getInstance().currentUser) {
         if (FirebaseAuth.getInstance().currentUser != null) {
             Screen.Main.route
         } else {
@@ -42,6 +43,9 @@ fun AppNavigation() {
         }
         composable(Screen.Main.route) {
             MainScreen(mainNavController = navController, authViewModel = authViewModel)
+        }
+        composable(Screen.UserListings.route) {
+            UserListingsScreen(mainNavController = navController)
         }
         composable(
             route = Screen.ProductDetail.route,

@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.group18.gosell.data.model.formatPrice
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -92,6 +93,14 @@ fun ProductDetailScreen(
 
                         Text(product.name, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = formatPrice(product.price),
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
 
                         Text("Description", style = MaterialTheme.typography.titleMedium)
                         Text(product.description ?: "No description provided.", style = MaterialTheme.typography.bodyLarge)
