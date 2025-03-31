@@ -47,6 +47,16 @@ class ProductDetailViewModel : ViewModel() {
                     _uiState.value = ProductDetailState(error = "Product not found.", isLoading = false)
                     return@launch
                 }
+                
+                // Check if product is in user's wishlist
+                val currentUser = auth.currentUser
+                val isInWishlist = if (currentUser != null) {
+                    val userDoc = db.collection("users").document(currentUser.uid).get().await()
+                    val user = userDoc.toObject(User::class.java)
+                    user?.wishlist?.contains(productId) ?: false
+                } else {
+                    false
+                }
 
                 var seller: User? = null
                 if (product.sellerId.isNotBlank()) {
@@ -56,14 +66,6 @@ class ProductDetailViewModel : ViewModel() {
                     } catch (sellerError: Exception) {
                         println("Warning: Could not fetch seller info for product $productId: ${sellerError.message}")
                     }
-                }
-
-                // Check if product is in user's wishlist
-                var isInWishlist = false
-                auth.currentUser?.let { user ->
-                    val userDoc = db.collection("users").document(user.uid).get().await()
-                    val currentUser = userDoc.toObject(User::class.java)
-                    isInWishlist = currentUser?.wishlist?.contains(productId) == true
                 }
 
                 _uiState.value = ProductDetailState(
@@ -88,32 +90,28 @@ class ProductDetailViewModel : ViewModel() {
     }
 
     fun toggleWishlist() {
+        val currentUser = auth.currentUser ?: return
+        val product = _uiState.value.product ?: return
+
         viewModelScope.launch {
             try {
-                val userId = auth.currentUser?.uid ?: throw Exception("User not logged in")
-                val productId = _uiState.value.product?.id ?: throw Exception("Product not found")
-                val userRef = db.collection("users").document(userId)
+                val userRef = db.collection("users").document(currentUser.uid)
+                val userDoc = userRef.get().await()
+                val user = userDoc.toObject(User::class.java)
+                val currentWishlist = user?.wishlist?.toMutableList() ?: mutableListOf()
 
-                db.runTransaction { transaction ->
-                    val snapshot = transaction.get(userRef)
-                    val currentUser = snapshot.toObject(User::class.java)
-                    val currentWishlist = currentUser?.wishlist ?: emptyList()
-                    
-                    val updatedWishlist = if (currentWishlist.contains(productId)) {
-                        currentWishlist.filter { it != productId }
-                    } else {
-                        currentWishlist + productId
+                if (_uiState.value.isInWishlist) {
+                    currentWishlist.remove(product.id)
+                } else {
+                    if (!currentWishlist.contains(product.id)) {
+                        currentWishlist.add(product.id)
                     }
-                    
-                    transaction.update(userRef, "wishlist", updatedWishlist)
-                }.await()
+                }
 
-                // Update UI state
-                _uiState.value = _uiState.value.copy(
-                    isInWishlist = !_uiState.value.isInWishlist
-                )
+                userRef.update("wishlist", currentWishlist).await()
+                _uiState.value = _uiState.value.copy(isInWishlist = !_uiState.value.isInWishlist)
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = e.localizedMessage)
+                _uiState.value = _uiState.value.copy(error = "Failed to update wishlist: ${e.message}")
             }
         }
     }
