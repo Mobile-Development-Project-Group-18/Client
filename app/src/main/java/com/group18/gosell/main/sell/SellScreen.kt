@@ -2,12 +2,15 @@ package com.group18.gosell.main.sell
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.group18.gosell.navigation.Screen
@@ -21,10 +24,11 @@ fun SellScreen(
     val description by sellViewModel.description.collectAsState()
     val place by sellViewModel.place.collectAsState()
     val type by sellViewModel.type.collectAsState()
+    val price by sellViewModel.price.collectAsState()
     val imageUri by sellViewModel.imageUri.collectAsState()
     val isLoading by sellViewModel.isLoading.collectAsState()
     val error by sellViewModel.error.collectAsState()
-    val navigateToDetailId by sellViewModel.navigateToDetailId.collectAsState() // Observe navigation trigger
+    val navigateToDetailId by sellViewModel.navigateToDetailId.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -67,6 +71,22 @@ fun SellScreen(
                 singleLine = true,
                 isError = error?.contains("name", ignoreCase = true) == true,
                 enabled = !isLoading
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = price,
+                onValueChange = { sellViewModel.updatePrice(it) },
+                label = { Text("Price") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                enabled = !isLoading,
+                leadingIcon = { Text("$") },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Decimal,
+                    imeAction = ImeAction.Next
+                ),
+                isError = error?.contains("price", ignoreCase = true) == true
             )
             Spacer(modifier = Modifier.height(16.dp))
 

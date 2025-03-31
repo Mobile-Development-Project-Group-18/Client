@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController // Import NavController
 import com.group18.gosell.data.model.Product
+import com.group18.gosell.data.model.formatPrice
 import com.group18.gosell.navigation.Screen // Import Screen
 
 @Composable
@@ -74,7 +75,9 @@ fun HomeScreen(
 @Composable
 fun ProductItem(
     product: Product,
-    onItemClick: (productId: String) -> Unit
+    onItemClick: (productId: String) -> Unit,
+    isFavorite: Boolean = false,
+    onToggleFavorite: (productId: String) -> Unit = {}
 ) {
     Card(
         modifier = Modifier
@@ -101,7 +104,13 @@ fun ProductItem(
                 Text(product.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    product.description ?: "No description",
+                    text = formatPrice(product.price),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(product.description ?: "No description",
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 2,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis // Handle overflow
