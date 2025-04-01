@@ -2,6 +2,7 @@ package com.group18.gosell.main.detail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.group18.gosell.data.model.Product
@@ -15,12 +16,14 @@ data class ProductDetailState(
     val product: Product? = null,
     val seller: User? = null,
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val isInWishlist: Boolean = false
 )
 
 class ProductDetailViewModel : ViewModel() {
 
     private val db = Firebase.firestore
+    private val auth = FirebaseAuth.getInstance()
 
     private val _uiState = MutableStateFlow(ProductDetailState())
     val uiState: StateFlow<ProductDetailState> = _uiState
@@ -44,6 +47,16 @@ class ProductDetailViewModel : ViewModel() {
                     _uiState.value = ProductDetailState(error = "Product not found.", isLoading = false)
                     return@launch
                 }
+                
+                // Check if product is in user's wishlist
+                val currentUser = auth.currentUser
+                val isInWishlist = if (currentUser != null) {
+                    val userDoc = db.collection("users").document(currentUser.uid).get().await()
+                    val user = userDoc.toObject(User::class.java)
+                    user?.wishlist?.contains(productId) ?: false
+                } else {
+                    false
+                }
 
                 var seller: User? = null
                 if (product.sellerId.isNotBlank()) {
@@ -59,7 +72,8 @@ class ProductDetailViewModel : ViewModel() {
                     product = product,
                     seller = seller,
                     isLoading = false,
-                    error = null
+                    error = null,
+                    isInWishlist = isInWishlist
                 )
 
             } catch (e: Exception) {
@@ -73,5 +87,32 @@ class ProductDetailViewModel : ViewModel() {
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
+    }
+
+    fun toggleWishlist() {
+        val currentUser = auth.currentUser ?: return
+        val product = _uiState.value.product ?: return
+
+        viewModelScope.launch {
+            try {
+                val userRef = db.collection("users").document(currentUser.uid)
+                val userDoc = userRef.get().await()
+                val user = userDoc.toObject(User::class.java)
+                val currentWishlist = user?.wishlist?.toMutableList() ?: mutableListOf()
+
+                if (_uiState.value.isInWishlist) {
+                    currentWishlist.remove(product.id)
+                } else {
+                    if (!currentWishlist.contains(product.id)) {
+                        currentWishlist.add(product.id)
+                    }
+                }
+
+                userRef.update("wishlist", currentWishlist).await()
+                _uiState.value = _uiState.value.copy(isInWishlist = !_uiState.value.isInWishlist)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = "Failed to update wishlist: ${e.message}")
+            }
+        }
     }
 }

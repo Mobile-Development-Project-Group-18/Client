@@ -10,7 +10,8 @@ data class User(
     val emailVerified: Boolean = false,
     val createDate: Long = System.currentTimeMillis(),
     val address: String? = null,
-    val avatar: String? = null
+    val avatar: String? = null,
+    val wishlist: List<String> = emptyList() // List of product IDs in wishlist
 ) {
-    constructor() : this("", "", "", "", null, false, 0L, null, null)
+    constructor() : this("", "", "", "", null, false, 0L, null, null, emptyList())
 }

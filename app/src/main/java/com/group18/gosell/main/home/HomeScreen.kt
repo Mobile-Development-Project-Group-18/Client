@@ -9,6 +9,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -27,6 +30,7 @@ fun HomeScreen(
     val products by homeViewModel.products.collectAsState()
     val isLoading by homeViewModel.isLoading.collectAsState()
     val error by homeViewModel.error.collectAsState()
+    val wishlistItems by homeViewModel.wishlistItems.collectAsState()
 
     LaunchedEffect(Unit) {
         homeViewModel.fetchProducts()
@@ -64,7 +68,9 @@ fun HomeScreen(
                         product = product,
                         onItemClick = { productId ->
                             mainNavController.navigate(Screen.ProductDetail.createRoute(productId))
-                        }
+                        },
+                        isInWishlist = wishlistItems.contains(product.id),
+                        onToggleWishlist = { productId -> homeViewModel.toggleWishlist(productId) }
                     )
                 }
             }
@@ -76,8 +82,8 @@ fun HomeScreen(
 fun ProductItem(
     product: Product,
     onItemClick: (productId: String) -> Unit,
-    isFavorite: Boolean = false,
-    onToggleFavorite: (productId: String) -> Unit = {}
+    isInWishlist: Boolean,
+    onToggleWishlist: (productId: String) -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -101,7 +107,27 @@ fun ProductItem(
             Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(product.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = product.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(
+                        onClick = { onToggleWishlist(product.id) }
+                    ) {
+                        Icon(
+                            imageVector = if (isInWishlist) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                            contentDescription = if (isInWishlist) "Remove from Wishlist" else "Add to Wishlist",
+                            tint = if (isInWishlist) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = formatPrice(product.price),
@@ -113,7 +139,7 @@ fun ProductItem(
                 Text(product.description ?: "No description",
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 2,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis // Handle overflow
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("Type: ${product.type ?: "N/A"}", style = MaterialTheme.typography.bodySmall)

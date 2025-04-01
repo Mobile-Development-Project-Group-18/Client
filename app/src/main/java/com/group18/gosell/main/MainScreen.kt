@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -21,6 +22,7 @@ import com.group18.gosell.main.profile.ProfileScreen
 import com.group18.gosell.main.profile.ProfileViewModel
 import com.group18.gosell.main.sell.SellScreen
 import com.group18.gosell.main.sell.SellViewModel
+import com.group18.gosell.main.wishlist.WishlistScreen
 import com.group18.gosell.navigation.Screen
 
 @Composable
@@ -44,6 +46,7 @@ fun BottomNavigationBar(navController: NavHostController) {
     val items = listOf(
         Screen.Home,
         Screen.Sell,
+        Screen.Wishlist,
         Screen.Profile
     )
 
@@ -57,12 +60,14 @@ fun BottomNavigationBar(navController: NavHostController) {
                 Screen.Home -> Icons.Filled.Home
                 Screen.Sell -> Icons.Filled.AddCircle
                 Screen.Profile -> Icons.Filled.AccountCircle
+                Screen.Wishlist -> Icons.Filled.Favorite
                 else -> Icons.Filled.Home // Should not happen
             }
             val label = when (screen) {
                 Screen.Home -> "Home"
                 Screen.Sell -> "Sell"
                 Screen.Profile -> "Profile"
+                Screen.Wishlist -> "Wishlist"
                 else -> ""
             }
 
@@ -113,6 +118,14 @@ fun BottomNavGraph(
                 profileViewModel = profileViewModel,
                 authViewModel = authViewModel,
                 mainNavController = mainNavController
+            )
+        }
+
+        composable(Screen.Wishlist.route) {
+            WishlistScreen(
+                onProductClick = { productId ->
+                    mainNavController.navigate(Screen.ProductDetail.createRoute(productId))
+                }
             )
         }
     }
