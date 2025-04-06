@@ -28,7 +28,7 @@ class WishlistViewModel : ViewModel() {
         loadWishlist()
     }
 
-    fun loadWishlist() {
+    private fun loadWishlist() {
         viewModelScope.launch {
             _uiState.value = WishlistState(isLoading = true)
             try {
@@ -67,8 +67,7 @@ class WishlistViewModel : ViewModel() {
                     val updatedWishlist = currentUser?.wishlist?.filter { it != productId } ?: emptyList()
                     transaction.update(userRef, "wishlist", updatedWishlist)
                 }.await()
-                
-                // Refresh wishlist after removal
+
                 loadWishlist()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.localizedMessage)

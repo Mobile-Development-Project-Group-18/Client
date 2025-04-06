@@ -69,7 +69,6 @@ fun WishlistScreen(
                 }
             }
 
-            // Error Snackbar
             uiState.error?.let { error ->
                 Snackbar(
                     modifier = Modifier.align(Alignment.BottomCenter),
@@ -86,7 +85,6 @@ fun WishlistScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WishlistProductCard(
     product: Product,
