@@ -78,7 +78,9 @@ fun UserListingsScreen(
                             product = product,
                             onItemClick = { productId ->
                                 mainNavController.navigate(Screen.ProductDetail.createRoute(productId))
-                            }
+                            },
+                            isInWishlist = false,
+                            onToggleWishlist = {}
                         )
                     }
                 }

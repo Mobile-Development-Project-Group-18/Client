@@ -1,24 +1,59 @@
 package com.group18.gosell.main.detail
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.group18.gosell.data.model.formatPrice
-import java.text.SimpleDateFormat
-import java.util.*
+import com.group18.gosell.ui.theme.GoSellColorSecondary
+import com.group18.gosell.ui.theme.GoSellIconTint
+import com.group18.gosell.ui.theme.GoSellRed
+import com.group18.gosell.ui.theme.GoSellTextSecondary
+import com.group18.gosell.ui.theme.GosellTheme
+import com.group18.myapplication.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,111 +74,237 @@ fun ProductDetailScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(product?.name ?: "Product Details") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) { // Standard back navigation
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = { viewModel.toggleWishlist() }
-                    ) {
-                        Icon(
-                            imageVector = if (uiState.isInWishlist) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                            contentDescription = if (uiState.isInWishlist) "Remove from Wishlist" else "Add to Wishlist",
-                            tint = if (uiState.isInWishlist) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
-        ) {
-            when {
-                uiState.isLoading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                }
-                uiState.error != null -> {
-                    Text(
-                        text = uiState.error ?: "An unknown error occurred.",
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-                product != null -> {
-                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp)
-                                .padding(bottom = 16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("IMAGE PLACEHOLDER", style = MaterialTheme.typography.headlineSmall, color = Color.Gray)
-                        }
-
-                        Text(product.name, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(8.dp))
-
+    GosellTheme {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
                         Text(
-                            text = formatPrice(product.price),
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            product?.name ?: "Product Details",
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Text("Description", style = MaterialTheme.typography.titleMedium)
-                        Text(product.description ?: "No description provided.", style = MaterialTheme.typography.bodyLarge)
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Text("Category/Type", style = MaterialTheme.typography.titleMedium)
-                        Text(product.type ?: "N/A", style = MaterialTheme.typography.bodyMedium)
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Text("Location", style = MaterialTheme.typography.titleMedium)
-                        Text(product.place ?: "N/A", style = MaterialTheme.typography.bodyMedium)
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Display Seller Info if available
-                        if (seller != null) {
-                            Text("Seller", style = MaterialTheme.typography.titleMedium)
-                            Text("${seller.firstName} ${seller.lastName}", style = MaterialTheme.typography.bodyMedium)
-                            Spacer(modifier = Modifier.height(8.dp))
-                        } else if (product.sellerId.isNotBlank()){
-                            Text("Seller ID: ${product.sellerId}", style = MaterialTheme.typography.bodySmall) // Fallback
-                            Spacer(modifier = Modifier.height(8.dp))
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.navigateUp() }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                         }
+                    },
+                    actions = {
+                        if (product != null) {
+                            IconButton(
+                                onClick = { viewModel.toggleWishlist() }
+                            ) {
+                                Icon(
+                                    imageVector = if (uiState.isInWishlist) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                    contentDescription = if (uiState.isInWishlist) "Remove from Wishlist" else "Add to Wishlist",
+                                    tint = if (uiState.isInWishlist) GoSellRed else GoSellIconTint
+                                )
+                            }
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                        titleContentColor = MaterialTheme.colorScheme.onBackground,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
+                        actionIconContentColor = MaterialTheme.colorScheme.onBackground
+                    )
+                )
+            },
+        ) { paddingValues ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .background(MaterialTheme.colorScheme.background)
+            ) {
+                when {
+                    uiState.isLoading -> {
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    }
+
+                    uiState.error != null -> {
+                        Text(
+                            text = uiState.error ?: "An unknown error occurred.",
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .padding(16.dp)
+                        )
+                    }
+
+                    product != null -> {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            AsyncImage(
+                                model = product.image ?: R.drawable.ic_launcher_background,
+                                contentDescription = product.name,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(300.dp)
+                                    .background(GoSellColorSecondary),
+                                contentScale = ContentScale.Crop,
+                                error = painterResource(id = R.drawable.ic_launcher_background)
+                            )
+
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    product.name,
+                                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = formatPrice(product.price),
+                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        Icons.Filled.LocationOn,
+                                        contentDescription = "Location",
+                                        tint = GoSellIconTint,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = product.place ?: "N/A",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = GoSellTextSecondary
+                                    )
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Icon(
+                                        Icons.Filled.Schedule,
+                                        contentDescription = "Posted Time",
+                                        tint = GoSellIconTint,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = formatTimestampRelative(product.createdAt), // Relative time
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = GoSellTextSecondary
+                                    )
+
+                                }
+                                Spacer(modifier = Modifier.height(20.dp))
 
 
-                        Text("Posted on", style = MaterialTheme.typography.titleMedium)
-                        Text(formatTimestamp(product.createdAt), style = MaterialTheme.typography.bodySmall)
-                        if (product.updatedAt != null) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text("Updated on", style = MaterialTheme.typography.titleMedium)
-                            Text(formatTimestamp(product.updatedAt), style = MaterialTheme.typography.bodySmall)
+                                Text(
+                                    "Description",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    product.description ?: "No description provided.",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    lineHeight = 24.sp
+                                )
+                                Spacer(modifier = Modifier.height(20.dp))
+
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(vertical = 12.dp),
+                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                                )
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { /* TODO: Navigate to seller profile */ },
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    AsyncImage(
+                                        model = seller?.avatar ?: R.drawable.ic_launcher_background,
+                                        contentDescription = "Seller Avatar",
+                                        modifier = Modifier
+                                            .size(48.dp)
+                                            .clip(CircleShape)
+                                            .background(GoSellColorSecondary),
+                                        contentScale = ContentScale.Crop,
+                                        error = painterResource(id = R.drawable.ic_launcher_background)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = if (seller != null) "${seller.firstName} ${seller.lastName}".trim() else "Seller",
+                                            style = MaterialTheme.typography.titleMedium.copy(
+                                                fontWeight = FontWeight.SemiBold
+                                            ),
+                                            color = MaterialTheme.colorScheme.onBackground
+                                        )
+                                        Text(
+                                            text = "View Profile",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = GoSellTextSecondary
+                                        )
+                                    }
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.ArrowForwardIos,
+                                        contentDescription = "View Profile",
+                                        tint = GoSellIconTint,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(vertical = 12.dp),
+                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                                )
+
+                                if (!product.type.isNullOrBlank()) {
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        "Category",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(product.type, style = MaterialTheme.typography.bodyMedium)
+                                }
+
+
+                            }
+                            Spacer(modifier = Modifier.height(16.dp)) // Bottom padding
                         }
                     }
-                }
-                else -> {
-                    Text("Product data not available.", modifier = Modifier.align(Alignment.Center))
+
+                    else -> {
+                        Text(
+                            "Product not available.",
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .padding(16.dp)
+                        )
+                    }
                 }
             }
         }
     }
 }
 
-private fun formatTimestamp(timestamp: Long?): String {
-    if (timestamp == null) return "N/A"
-    val sdf = SimpleDateFormat("MMM dd, yyyy - HH:mm", Locale.getDefault())
-    return sdf.format(Date(timestamp))
+
+private fun formatTimestampRelative(timestamp: Long?): String {
+    if (timestamp == null || timestamp == 0L) return "N/A"
+    val now = System.currentTimeMillis()
+    val diff = now - timestamp
+
+    val seconds = diff / 1000
+    val minutes = seconds / 60
+    val hours = minutes / 60
+    val days = hours / 24
+    val weeks = days / 7
+    val months = days / 30
+    val years = days / 365
+
+    return when {
+        years > 0 -> "$years year${if (years > 1) "s" else ""} ago"
+        months > 0 -> "$months month${if (months > 1) "s" else ""} ago"
+        weeks > 0 -> "$weeks week${if (weeks > 1) "s" else ""} ago"
+        days > 0 -> "$days day${if (days > 1) "s" else ""} ago"
+        hours > 0 -> "$hours hour${if (hours > 1) "s" else ""} ago"
+        minutes > 0 -> "$minutes min${if (minutes > 1) "s" else ""} ago"
+        else -> "Just now"
+    }
 }
