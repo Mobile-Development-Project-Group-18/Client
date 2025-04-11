@@ -1,61 +1,76 @@
 package com.group18.gosell.main.messages
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.*
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
+import com.google.firebase.auth.FirebaseAuth
+import com.group18.gosell.data.model.Chat
+import com.group18.gosell.navigation.Screen
+import com.group18.gosell.ui.theme.GoSellColorSecondary
 import com.group18.gosell.ui.theme.GoSellTextSecondary
 import com.group18.gosell.ui.theme.GosellTheme
 import com.group18.myapplication.R
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-data class MockMessage(
-    val id: Int,
-    val senderName: String,
-    val messageSnippet: String,
-    val timestamp: String,
-    val imageUrl: Int? = null,
-    val isUnread: Boolean
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MessagesScreen(navController: NavController) {
-    val mockMessages = listOf(
-        MockMessage(1, "Emma Wilson", "Great! I was wondering if you c...", "over 1 year ago", null, true),
-        MockMessage(2, "Michael Brown", "How about Central Park?", "over 1 year ago", null, false),
-        MockMessage(3, "Sophia Lee", "Okay, sounds good!", "2 days ago", null, false),
-        MockMessage(4, "David Miller", "Can you send more photos?", "3 days ago", null, true)
-    )
+fun MessagesScreen(
+    navController: NavController,
+    messagesViewModel: MessagesViewModel = viewModel()
+) {
+    val uiState by messagesViewModel.uiState.collectAsState()
+    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
 
     GosellTheme {
         Scaffold(
             topBar = {
                 TopAppBar(
                     title = { Text("Messages", fontWeight = FontWeight.Bold) },
-                    navigationIcon = {
-                        IconButton(onClick = { navController.popBackStack() }) { // Or handle differently if needed
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                    },
+                    // Removed back arrow assuming this is a main tab
                     actions = {
                         IconButton(onClick = { /* TODO: Search Action */ }) {
                             Icon(Icons.Filled.Search, contentDescription = "Search Messages")
@@ -68,16 +83,50 @@ fun MessagesScreen(navController: NavController) {
                 )
             }
         ) { paddingValues ->
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .background(MaterialTheme.colorScheme.background),
-                contentPadding = PaddingValues(vertical = 8.dp)
-            ) {
-                items(mockMessages) { message ->
-                    MessageItem(message = message)
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)) {
+
+                when {
+                    uiState.isLoading -> {
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    }
+                    uiState.error != null -> {
+                        Text(
+                            text = uiState.error ?: "An error occurred",
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.align(Alignment.Center).padding(16.dp)
+                        )
+                        // Optionally add a retry button
+                    }
+                    uiState.chats.isEmpty() -> {
+                        Text(
+                            "No messages yet.",
+                            modifier = Modifier.align(Alignment.Center).padding(16.dp),
+                            color = GoSellTextSecondary
+                        )
+                    }
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.background),
+                            contentPadding = PaddingValues(vertical = 0.dp) // No top/bottom padding for list itself
+                        ) {
+                            items(uiState.chats, key = { it.id }) { chat ->
+                                if (currentUserId != null) {
+                                    ChatItem(
+                                        chat = chat,
+                                        currentUserId = currentUserId,
+                                        onChatClick = { chatId, otherUserId ->
+                                            navController.navigate(Screen.ChatDetail.createRoute(chatId, otherUserId ?: "unknown"))
+                                        }
+                                    )
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), thickness = 0.5.dp)
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -85,37 +134,54 @@ fun MessagesScreen(navController: NavController) {
 }
 
 @Composable
-fun MessageItem(message: MockMessage) {
+fun ChatItem(
+    chat: Chat,
+    currentUserId: String,
+    onChatClick: (chatId: String, otherUserId: String?) -> Unit
+) {
+    val otherUserId = chat.otherParticipantId(currentUserId)
+    val otherUserName = otherUserId?.let { chat.participantNames[it] } ?: "Unknown User"
+    val otherUserAvatar = otherUserId?.let { chat.participantAvatars[it] }
+    val lastMessage = chat.lastMessage ?: "No messages yet"
+    val timestamp = formatTimestampRelativeShort(chat.lastMessageTimestamp)
+    val unreadCount = chat.unreadCounts[currentUserId] ?: 0
+    val isUnread = unreadCount > 0
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { /* TODO: Navigate to chat */ }
+            .clickable { onChatClick(chat.id, otherUserId) }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Image(
-            painter = painterResource(id = message.imageUrl ?: R.drawable.ic_launcher_background), // Placeholder
-            contentDescription = "${message.senderName} profile picture",
+        AsyncImage(
+            model = otherUserAvatar ?: R.drawable.ic_launcher_background,
+            contentDescription = "$otherUserName profile picture",
             modifier = Modifier
-                .size(48.dp)
+                .size(52.dp)
                 .clip(CircleShape)
-                .background(Color.Gray),
-            contentScale = ContentScale.Crop
+                .background(GoSellColorSecondary),
+            contentScale = ContentScale.Crop,
+            error = painterResource(id = R.drawable.ic_launcher_background)
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
             ) {
                 Text(
-                    text = message.senderName,
+                    text = otherUserName,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.onBackground
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false).padding(end = 8.dp)
                 )
                 Text(
-                    text = message.timestamp,
+                    text = timestamp,
                     fontSize = 12.sp,
                     color = GoSellTextSecondary
                 )
@@ -127,14 +193,15 @@ fun MessageItem(message: MockMessage) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = message.messageSnippet,
+                    text = lastMessage,
                     fontSize = 14.sp,
-                    color = if (message.isUnread) MaterialTheme.colorScheme.onBackground else GoSellTextSecondary,
+                    color = if (isUnread) MaterialTheme.colorScheme.onBackground else GoSellTextSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    fontWeight = if (message.isUnread) FontWeight.Medium else FontWeight.Normal
+                    fontWeight = if (isUnread) FontWeight.Medium else FontWeight.Normal,
+                    modifier = Modifier.weight(1f, fill = false).padding(end = 8.dp) // Prevent text pushing badge
                 )
-                if (message.isUnread) {
+                if (isUnread) {
                     Box(
                         modifier = Modifier
                             .size(8.dp)
@@ -142,7 +209,25 @@ fun MessageItem(message: MockMessage) {
                     )
                 }
             }
-
         }
+    }
+}
+
+fun formatTimestampRelativeShort(date: Date?): String {
+    if (date == null) return ""
+    val now = System.currentTimeMillis()
+    val diff = now - date.time
+
+    val seconds = diff / 1000
+    val minutes = seconds / 60
+    val hours = minutes / 60
+    val days = hours / 24
+
+    return when {
+        days > 1 -> SimpleDateFormat("MMM d", Locale.getDefault()).format(date) // Older than yesterday
+        days == 1L -> "Yesterday"
+        hours > 0 -> "${hours}h ago"
+        minutes > 0 -> "${minutes}m ago"
+        else -> "Just now"
     }
 }
