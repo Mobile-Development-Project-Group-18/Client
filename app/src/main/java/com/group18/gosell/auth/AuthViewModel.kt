@@ -1,5 +1,6 @@
 package com.group18.gosell.auth
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
@@ -8,6 +9,7 @@ import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.group18.gosell.data.model.RetrofitInstance.api
 import com.group18.gosell.data.model.User
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -78,7 +80,15 @@ class AuthViewModel : ViewModel() {
 
                     )
 
-                    db.collection("users").document(firebaseUser.uid).set(newUser).await()
+                val response = api.register(newUser)
+                    if (response.isSuccessful) {
+                        Log.d("Signup", "User registered successfully on backend")
+                        _authState.value = AuthenticationState.AUTHENTICATED
+                    } else {
+                        val errorMsg = response.errorBody()?.string() ?: "Unknown backend error"
+                        Log.e("Signup", "Backend registration failed: $errorMsg")
+                        throw Exception("Backend registration failed: $errorMsg")
+                    }
                 } else {
                     throw Exception("Firebase user creation failed unexpectedly.")
                 }

@@ -73,9 +73,9 @@ fun MainScreen(mainNavController: NavHostController, authViewModel: AuthViewMode
 fun BottomNavigationBar(navController: NavHostController) {
     val items = listOf(
         BottomNavItem("Home", Screen.Home.route, Icons.Filled.Home, Icons.Outlined.Home),
-        BottomNavItem("Messages", Screen.Messages.route, Icons.Filled.MailOutline, Icons.Outlined.MailOutline), // Added
+        BottomNavItem("Messages", Screen.Messages.route, Icons.Filled.MailOutline, Icons.Outlined.MailOutline),
         BottomNavItem("Sell", Screen.Sell.route, Icons.Filled.AddCircleOutline, Icons.Outlined.AddCircleOutline),
-        BottomNavItem("Wishlist", Screen.Wishlist.route, Icons.Filled.FavoriteBorder, Icons.Outlined.FavoriteBorder), // Renamed
+        BottomNavItem("Wishlist", Screen.Wishlist.route, Icons.Filled.FavoriteBorder, Icons.Outlined.FavoriteBorder),
         BottomNavItem("Profile", Screen.Profile.route, Icons.Filled.AccountCircle, Icons.Outlined.AccountCircle)
     )
 
