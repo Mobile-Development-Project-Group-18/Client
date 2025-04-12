@@ -18,12 +18,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
+import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -42,12 +47,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.google.firebase.auth.FirebaseAuth
 import com.group18.gosell.data.model.formatPrice
+import com.group18.gosell.navigation.Screen
 import com.group18.gosell.ui.theme.GoSellColorSecondary
 import com.group18.gosell.ui.theme.GoSellIconTint
 import com.group18.gosell.ui.theme.GoSellRed
@@ -65,12 +75,30 @@ fun ProductDetailScreen(
     val uiState by viewModel.uiState.collectAsState()
     val product = uiState.product
     val seller = uiState.seller
+    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
-    LaunchedEffect(productId) {
-        if (!productId.isNullOrBlank()) {
-            viewModel.fetchProductDetails(productId)
-        } else {
-            viewModel.clearError()
+    DisposableEffect(productId, lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_START) {
+                if (!productId.isNullOrBlank()) {
+                    viewModel.fetchProductDetails(productId)
+                } else {
+                    viewModel.clearError()
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    LaunchedEffect(uiState.navigateToChatId) {
+        uiState.navigateToChatId?.let { chatId ->
+            val otherUserId = seller?.id ?: "unknown"
+            navController.navigate(Screen.ChatDetail.createRoute(chatId, otherUserId))
+            viewModel.onChatNavigationComplete()
         }
     }
 
@@ -82,7 +110,7 @@ fun ProductDetailScreen(
                         Text(
                             product?.name ?: "Product Details",
                             maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis
                         )
                     },
                     navigationIcon = {
@@ -111,6 +139,25 @@ fun ProductDetailScreen(
                     )
                 )
             },
+            floatingActionButton = {
+                if (product != null && seller != null && seller.id != currentUserId) {
+                    ExtendedFloatingActionButton(
+                        onClick = { viewModel.initiateOrGetChat() },
+                        icon = {
+                            if (uiState.isChatLoading) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                            } else {
+                                Icon(Icons.AutoMirrored.Filled.Message, "Message Seller")
+                            }
+                        },
+                        text = { Text("Message Seller") },
+                        expanded = true,
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            },
+            floatingActionButtonPosition = FabPosition.Center
         ) { paddingValues ->
             Box(
                 modifier = Modifier
@@ -123,14 +170,17 @@ fun ProductDetailScreen(
                         CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                     }
 
-                    uiState.error != null -> {
-                        Text(
-                            text = uiState.error ?: "An unknown error occurred.",
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .padding(16.dp)
-                        )
+                    uiState.error != null && product == null -> {
+                        Column(modifier = Modifier.align(Alignment.Center).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = uiState.error ?: "An unknown error occurred.",
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(onClick = { if(!productId.isNullOrBlank()) viewModel.fetchProductDetails(productId)}) {
+                                Text("Retry")
+                            }
+                        }
                     }
 
                     product != null -> {
@@ -138,6 +188,7 @@ fun ProductDetailScreen(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .verticalScroll(rememberScrollState())
+                                .padding(bottom = 80.dp)
                         ) {
                             AsyncImage(
                                 model = product.image ?: R.drawable.ic_launcher_background,
@@ -150,7 +201,7 @@ fun ProductDetailScreen(
                                 error = painterResource(id = R.drawable.ic_launcher_background)
                             )
 
-                            Column(modifier = Modifier.padding(16.dp)) {
+                            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                                 Text(
                                     product.name,
                                     style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
@@ -186,7 +237,7 @@ fun ProductDetailScreen(
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = formatTimestampRelative(product.createdAt), // Relative time
+                                        text = formatTimestampRelative(product.createdAt),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = GoSellTextSecondary
                                     )
@@ -211,48 +262,55 @@ fun ProductDetailScreen(
                                     modifier = Modifier.padding(vertical = 12.dp),
                                     color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
                                 )
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { /* TODO: Navigate to seller profile */ },
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    AsyncImage(
-                                        model = seller?.avatar ?: R.drawable.ic_launcher_background,
-                                        contentDescription = "Seller Avatar",
+                                if (seller != null && seller.id != currentUserId) {
+                                    Row(
                                         modifier = Modifier
-                                            .size(48.dp)
-                                            .clip(CircleShape)
-                                            .background(GoSellColorSecondary),
-                                        contentScale = ContentScale.Crop,
-                                        error = painterResource(id = R.drawable.ic_launcher_background)
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = if (seller != null) "${seller.firstName} ${seller.lastName}".trim() else "Seller",
-                                            style = MaterialTheme.typography.titleMedium.copy(
-                                                fontWeight = FontWeight.SemiBold
-                                            ),
-                                            color = MaterialTheme.colorScheme.onBackground
+                                            .fillMaxWidth()
+                                            .clickable { /* TODO: Navigate to seller profile (optional) */ },
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        AsyncImage(
+                                            model = seller.avatar ?: R.drawable.ic_launcher_background,
+                                            contentDescription = "Seller Avatar",
+                                            modifier = Modifier
+                                                .size(48.dp)
+                                                .clip(CircleShape)
+                                                .background(GoSellColorSecondary),
+                                            contentScale = ContentScale.Crop,
+                                            error = painterResource(id = R.drawable.ic_launcher_background)
                                         )
-                                        Text(
-                                            text = "View Profile",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = GoSellTextSecondary
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = "${seller.firstName} ${seller.lastName}".trim(),
+                                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                                                color = MaterialTheme.colorScheme.onBackground
+                                            )
+                                            Text(
+                                                text = "View Profile",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = GoSellTextSecondary
+                                            )
+                                        }
+                                        Icon(
+                                            Icons.AutoMirrored.Filled.ArrowForwardIos,
+                                            contentDescription = "View Profile",
+                                            tint = GoSellIconTint,
+                                            modifier = Modifier.size(18.dp)
                                         )
                                     }
-                                    Icon(
-                                        Icons.AutoMirrored.Filled.ArrowForwardIos,
-                                        contentDescription = "View Profile",
-                                        tint = GoSellIconTint,
-                                        modifier = Modifier.size(18.dp)
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(vertical = 12.dp),
+                                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                                    )
+                                } else if (seller != null && seller.id == currentUserId) {
+                                    Text("This is your listing", style = MaterialTheme.typography.bodySmall, color = GoSellTextSecondary, modifier = Modifier.padding(bottom=12.dp))
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(bottom = 12.dp),
+                                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
                                     )
                                 }
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(vertical = 12.dp),
-                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                                )
+
 
                                 if (!product.type.isNullOrBlank()) {
                                     Spacer(modifier = Modifier.height(16.dp))
@@ -263,10 +321,15 @@ fun ProductDetailScreen(
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(product.type, style = MaterialTheme.typography.bodyMedium)
                                 }
-
-
                             }
-                            Spacer(modifier = Modifier.height(16.dp)) // Bottom padding
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                        if (uiState.error != null){
+                            Text(
+                                text = uiState.error?:"",
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp).background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f)).padding(8.dp)
+                            )
                         }
                     }
 

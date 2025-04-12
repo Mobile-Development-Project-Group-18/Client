@@ -4,8 +4,8 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
+import com.google.firebase.firestore.FirebaseFirestore
+import com.group18.gosell.data.model.Chat
 import com.group18.gosell.data.model.Product
 import com.group18.gosell.data.model.RetrofitInstance.api
 import com.group18.gosell.data.model.User
@@ -19,12 +19,14 @@ data class ProductDetailState(
     val seller: User? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
-    val isInWishlist: Boolean = false
+    val isInWishlist: Boolean = false,
+    val navigateToChatId: String? = null,
+    val isChatLoading: Boolean = false
 )
 
 class ProductDetailViewModel : ViewModel() {
 
-    private val db = Firebase.firestore
+    private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
 
     private val _uiState = MutableStateFlow(ProductDetailState())
@@ -35,7 +37,8 @@ class ProductDetailViewModel : ViewModel() {
             _uiState.value = _uiState.value.copy(error = "Invalid Product ID.", isLoading = false)
             return
         }
-        if (_uiState.value.isLoading || _uiState.value.product?.id == productId) {
+        if (_uiState.value.isLoading || (_uiState.value.product?.id == productId && _uiState.value.seller != null)) {
+            _uiState.value = _uiState.value.copy(navigateToChatId = null) // Clear navigation trigger on re-fetch/re-entry
             return
         }
 
@@ -47,26 +50,27 @@ class ProductDetailViewModel : ViewModel() {
                     _uiState.value = ProductDetailState(error = "Product not found.", isLoading = false)
                     return@launch
                 }
-
-                val product = response.body()!!
                 
-                // Check if product is in user's wishlist
                 val currentUser = auth.currentUser
-                val isInWishlist = if (currentUser != null) {
+                var isInWishlist = false
+                var currentUserData: User? = null
+
+                if (currentUser != null) {
                     try {
-                        val wishlist = api.getUserWishList(currentUser.uid)
-                        wishlist.any { it.productId == productId }
-                    } catch (e: Exception) {
-                        println("Failed to fetch wishlist: ${e.message}")
-                        false
+                        val userDoc = db.collection("users").document(currentUser.uid).get().await()
+                        currentUserData = userDoc.toObject(User::class.java)
+
+                        isInWishlist = currentUserData?.wishlist?.contains(productId) ?: false
+
+                    } catch (userError: Exception) {
+                        println("Warning: Could not fetch current user data from Firestore: ${userError.message}")
                     }
-                } else {
-                    false
                 }
 
 
+
                 var seller: User? = null
-                if (product.sellerId.isNotBlank()) {
+                if (product.sellerId.isNotBlank() && product.sellerId != currentUser?.uid) {
                     try {
                         val response = api.getUserById(product.sellerId)
                         if (response.isSuccessful) {
@@ -79,6 +83,8 @@ class ProductDetailViewModel : ViewModel() {
                     } catch (e: Exception) {
                         println("Warning: Could not fetch seller info for product $productId: ${e.message}")
                     }
+                } else if (product.sellerId == currentUser?.uid) {
+                    seller = currentUserData
                 }
 
 
@@ -99,6 +105,7 @@ class ProductDetailViewModel : ViewModel() {
         }
     }
 
+
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
     }
@@ -110,23 +117,93 @@ class ProductDetailViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val userRef = db.collection("users").document(currentUser.uid)
-                val userDoc = userRef.get().await()
-                val user = userDoc.toObject(User::class.java)
-                val currentWishlist = user?.wishlist?.toMutableList() ?: mutableListOf()
+                db.runTransaction { transaction ->
+                    val snapshot = transaction.get(userRef)
+                    val user = snapshot.toObject(User::class.java)
+                    val currentWishlist = user?.wishlist?.toMutableList() ?: mutableListOf()
 
-                if (_uiState.value.isInWishlist) {
-                    currentWishlist.remove(product.id)
-                } else {
-                    if (!currentWishlist.contains(product.id)) {
-                        currentWishlist.add(product.id)
+                    if (_uiState.value.isInWishlist) {
+                        currentWishlist.remove(product.id)
+                    } else {
+                        if (!currentWishlist.contains(product.id)) {
+                            currentWishlist.add(product.id)
+                        }
                     }
+                    transaction.update(userRef, "wishlist", currentWishlist)
+                    !_uiState.value.isInWishlist
+                }.addOnSuccessListener { isInWishlistAfterTransaction ->
+                    _uiState.value = _uiState.value.copy(isInWishlist = isInWishlistAfterTransaction)
+                }.addOnFailureListener { e ->
+                    _uiState.value = _uiState.value.copy(error = "Failed to update wishlist: ${e.message}")
                 }
-
-                userRef.update("wishlist", currentWishlist).await()
-                _uiState.value = _uiState.value.copy(isInWishlist = !_uiState.value.isInWishlist)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = "Failed to update wishlist: ${e.message}")
             }
         }
     }
+
+    fun initiateOrGetChat() {
+        val currentUser = auth.currentUser ?: return
+        val seller = _uiState.value.seller ?: return
+        val product = _uiState.value.product ?: return
+        val currentUserId = currentUser.uid
+        val sellerId = seller.id
+
+        if (currentUserId == sellerId) {
+            _uiState.value = _uiState.value.copy(error = "You cannot message yourself.")
+            return
+        }
+
+        _uiState.value = _uiState.value.copy(isChatLoading = true, error = null)
+
+        viewModelScope.launch {
+            try {
+                val existingChatQuery = db.collection("chats")
+                    .whereArrayContains("participants", currentUserId)
+                    .whereEqualTo("productContext", product.id)
+                    .get()
+                    .await()
+
+                val specificChat = existingChatQuery.documents.find {
+                    val participants = it.get("participants") as? List<*>
+                    participants?.contains(sellerId) == true
+                }
+
+
+                if (specificChat != null) {
+                    _uiState.value = _uiState.value.copy(navigateToChatId = specificChat.id, isChatLoading = false)
+                } else {
+                    val currentUserDoc = db.collection("users").document(currentUserId).get().await()
+                    val currentUserProfile = currentUserDoc.toObject(User::class.java)
+                        ?: throw Exception("Could not retrieve current user profile to create chat.")
+
+                    val newChat = Chat(
+                        participants = listOf(currentUserId, sellerId),
+                        participantNames = mapOf(
+                            currentUserId to "${currentUserProfile.firstName} ${currentUserProfile.lastName}".trim(),
+                            sellerId to "${seller.firstName} ${seller.lastName}".trim()
+                        ),
+                        participantAvatars = mapOf(
+                            currentUserId to currentUserProfile.avatar,
+                            sellerId to seller.avatar
+                        ),
+                        productContext = product.id,
+                        lastMessage = null,
+                        lastMessageTimestamp = null,
+                        unreadCounts = mapOf(currentUserId to 0, sellerId to 0)
+                    )
+
+                    val newChatRef = db.collection("chats").add(newChat).await()
+                    _uiState.value = _uiState.value.copy(navigateToChatId = newChatRef.id, isChatLoading = false)
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = "Failed to start chat: ${e.localizedMessage}", isChatLoading = false)
+            }
+        }
+    }
+
+    fun onChatNavigationComplete() {
+        _uiState.value = _uiState.value.copy(navigateToChatId = null)
+    }
+
 }

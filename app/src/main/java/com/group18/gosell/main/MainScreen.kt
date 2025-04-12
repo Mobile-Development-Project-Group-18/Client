@@ -12,6 +12,8 @@ import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.MailOutline
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -20,9 +22,11 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -54,10 +58,12 @@ data class BottomNavItem(
 @Composable
 fun MainScreen(mainNavController: NavHostController, authViewModel: AuthViewModel) {
     val bottomNavController = rememberNavController()
+    val mainViewModel: MainViewModel = viewModel()
 
+    val totalUnreadCount by mainViewModel.totalUnreadCount.collectAsState()
     GosellTheme {
         Scaffold(
-            bottomBar = { BottomNavigationBar(navController = bottomNavController) }
+            bottomBar = { BottomNavigationBar(navController = bottomNavController, totalUnreadCount = totalUnreadCount) }
         ) { innerPadding ->
             BottomNavGraph(
                 bottomNavController = bottomNavController,
@@ -68,9 +74,8 @@ fun MainScreen(mainNavController: NavHostController, authViewModel: AuthViewMode
         }
     }
 }
-
 @Composable
-fun BottomNavigationBar(navController: NavHostController) {
+fun BottomNavigationBar(navController: NavHostController, totalUnreadCount: Int) {
     val items = listOf(
         BottomNavItem("Home", Screen.Home.route, Icons.Filled.Home, Icons.Outlined.Home),
         BottomNavItem("Messages", Screen.Messages.route, Icons.Filled.MailOutline, Icons.Outlined.MailOutline),
@@ -90,10 +95,29 @@ fun BottomNavigationBar(navController: NavHostController) {
             val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
             NavigationBarItem(
                 icon = {
-                    Icon(
-                        if (selected) item.selectedIcon else item.unselectedIcon,
-                        contentDescription = item.label
-                    )
+                    if (item.route == Screen.Messages.route) {
+                        BadgedBox(badge = {
+                            if (totalUnreadCount > 0) {
+                                Badge {
+                                    Text(
+                                        text = totalUnreadCount.toString(),
+                                         fontSize = 10.sp,
+                                         color = MaterialTheme.colorScheme.onError
+                                    )
+                                }
+                            }
+                        }) {
+                            Icon(
+                                if (selected) item.selectedIcon else item.unselectedIcon,
+                                contentDescription = item.label
+                            )
+                        }
+                    } else {
+                        Icon(
+                            if (selected) item.selectedIcon else item.unselectedIcon,
+                            contentDescription = item.label
+                        )
+                    }
                 },
                 label = { Text(item.label, style = MaterialTheme.typography.labelSmall) },
                 selected = selected,
