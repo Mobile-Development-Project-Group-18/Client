@@ -6,10 +6,10 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.group18.gosell.data.model.Product
+import com.group18.gosell.data.model.RetrofitInstance.api
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 
 class SellViewModel : ViewModel() {
 
@@ -105,9 +105,9 @@ class SellViewModel : ViewModel() {
                     updatedAt = null
                 )
 
-                val documentReference = db.collection("products").add(newProduct).await()
-
-                _navigateToDetailId.value = documentReference.id
+                val response = api.addProduct(newProduct)
+                val productId = response.body()
+                _navigateToDetailId.value = productId
                 resetForm()
 
             } catch (e: Exception) {

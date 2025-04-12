@@ -1,16 +1,16 @@
 package com.group18.gosell.main.listings
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.group18.gosell.data.model.Product
+import com.group18.gosell.data.model.RetrofitInstance.api
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 
 class UserListingsViewModel : ViewModel() {
 
@@ -32,6 +32,7 @@ class UserListingsViewModel : ViewModel() {
 
     fun fetchUserListings() {
         val userId = auth.currentUser?.uid
+        Log.d("ProductAPI", "User ID: $userId")
         if (userId == null) {
             _error.value = "User not logged in."
             _listings.value = emptyList()
@@ -42,16 +43,8 @@ class UserListingsViewModel : ViewModel() {
             _isLoading.value = true
             _error.value = null
             try {
-                val result = db.collection("products")
-                    .whereEqualTo("sellerId", userId)
-                    .orderBy("createdAt", Query.Direction.DESCENDING)
-                    .get()
-                    .await()
-
-                val productList = result.documents.mapNotNull { document ->
-                    document.toObject(Product::class.java)?.copy(id = document.id)
-                }
-                _listings.value = productList
+                val response = api.getProductByUserId(userId.toString())
+                _listings.value = response
 
             } catch (e: Exception) {
                 _error.value = "Failed to load your listings: ${e.localizedMessage}"
