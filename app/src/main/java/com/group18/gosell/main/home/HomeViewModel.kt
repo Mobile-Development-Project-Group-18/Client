@@ -1,13 +1,15 @@
 package com.group18.gosell.main.home
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.group18.gosell.data.model.Product
+import com.group18.gosell.data.model.RetrofitInstance.api
 import com.group18.gosell.data.model.User
+import com.group18.gosell.data.model.WishList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -21,8 +23,8 @@ class HomeViewModel : ViewModel() {
     private val _products = MutableStateFlow<List<Product>>(emptyList())
     val products: StateFlow<List<Product>> = _products
 
-    private val _wishlistItems = MutableStateFlow<Set<String>>(emptySet())
-    val wishlistItems: StateFlow<Set<String>> = _wishlistItems
+    private val _wishlistItems = MutableStateFlow<List<WishList>>(emptyList())
+    val wishlistItems: StateFlow<List<WishList>> = _wishlistItems
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
@@ -40,15 +42,7 @@ class HomeViewModel : ViewModel() {
             _isLoading.value = true
             _error.value = null
             try {
-                val result = db.collection("products")
-                    .orderBy("createdAt", Query.Direction.DESCENDING)
-                    .get()
-                    .await()
-
-                val productList = result.documents.mapNotNull { document ->
-                    val product = document.toObject(Product::class.java)
-                    product?.copy(id = document.id)
-                }
+                val productList = api.getProducts()
                 _products.value = productList
 
             } catch (e: Exception) {
@@ -60,14 +54,14 @@ class HomeViewModel : ViewModel() {
         }
     }
 
+
     private fun fetchWishlist() {
-        val currentUser = auth.currentUser ?: return
+        val userId = auth.currentUser?.uid ?: return
 
         viewModelScope.launch {
             try {
-                val userDoc = db.collection("users").document(currentUser.uid).get().await()
-                val user = userDoc.toObject(User::class.java)
-                _wishlistItems.value = user?.wishlist?.toSet() ?: emptySet()
+                val wishlist = api.getUserWishList(userId)
+                _wishlistItems.value = wishlist
             } catch (e: Exception) {
                 _error.value = "Failed to load wishlist: ${e.localizedMessage}"
             }
@@ -79,24 +73,34 @@ class HomeViewModel : ViewModel() {
 
         viewModelScope.launch {
             try {
-                val userRef = db.collection("users").document(currentUser.uid)
-                val userDoc = userRef.get().await()
-                val user = userDoc.toObject(User::class.java)
-                val currentWishlist = user?.wishlist?.toMutableList() ?: mutableListOf()
+                val currentWishList = _wishlistItems.value
+                val existingFavorite = currentWishList.find { it.productId == productId }
 
-                if (currentWishlist.contains(productId)) {
-                    currentWishlist.remove(productId)
+                if (existingFavorite != null) {
+                    // Remove
+                    val response = api.removeWishList(existingFavorite.favoriteId!!)
+                    if (response.isSuccessful) {
+                        _wishlistItems.value = currentWishList.filterNot { it.productId == productId }
+                    } else {
+                        _error.value = "Failed to remove favorite"
+                    }
                 } else {
-                    currentWishlist.add(productId)
+                    // Add
+                    val newWish = WishList(userId = currentUser.uid, productId = productId)
+                    val response = api.addWishList(newWish)
+                    if (response.isSuccessful) {
+                        fetchWishlist() // refresh to get correct IDs from backend
+                    } else {
+                        _error.value = "Failed to add favorite"
+                    }
                 }
 
-                userRef.update("wishlist", currentWishlist).await()
-                _wishlistItems.value = currentWishlist.toSet()
             } catch (e: Exception) {
                 _error.value = "Failed to update wishlist: ${e.message}"
             }
         }
     }
+
     fun clearError() {
         _error.value = null
     }

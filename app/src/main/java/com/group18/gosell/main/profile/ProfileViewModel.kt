@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.group18.gosell.data.model.RetrofitInstance.api
 import com.group18.gosell.data.model.User
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,7 +41,8 @@ class ProfileViewModel : ViewModel() {
 
     private fun fetchUserProfile() {
         val currentAuthUser = auth.currentUser
-        if (currentAuthUser == null) {
+        val userId = currentAuthUser?.uid
+        if (currentAuthUser == null || userId == null) {
             _error.value = "No user logged in."
             _user.value = null
             return
@@ -50,22 +52,31 @@ class ProfileViewModel : ViewModel() {
             _isLoading.value = true
             _error.value = null
             try {
-                val docRef = db.collection("users").document(currentAuthUser.uid)
-                val documentSnapshot = docRef.get().await()
+                val response = api.getUserById(userId)
 
-                if (documentSnapshot.exists()) {
-                    val userProfile = documentSnapshot.toObject(User::class.java)
-                    _user.value = userProfile?.copy(id = documentSnapshot.id)
-
-                    if (userProfile != null && userProfile.emailVerified != currentAuthUser.isEmailVerified) {
-                        _user.value = _user.value?.copy(emailVerified = currentAuthUser.isEmailVerified)
+                if (response.isSuccessful) {
+                    val userProfile = response.body()
+                    if (userProfile != null) {
+                        // Sync emailVerified status with Firebase
+                        val updatedUser = if (userProfile.emailVerified != currentAuthUser.isEmailVerified) {
+                            userProfile.copy(emailVerified = currentAuthUser.isEmailVerified)
+                        } else {
+                            userProfile
+                        }
+                        _user.value = updatedUser
+                    } else {
+                        _error.value = "User profile is empty."
+                        _user.value = null
                     }
-
                 } else {
                     _error.value = "User profile data not found. Please complete your profile."
-                    _user.value = User(id = currentAuthUser.uid, email = currentAuthUser.email ?: "", firstName = "User", lastName = "") // Placeholder
+                    _user.value = User(
+                        id = userId,
+                        email = currentAuthUser.email ?: "",
+                        firstName = "User",
+                        lastName = ""
+                    )
                 }
-
             } catch (e: Exception) {
                 _error.value = "Failed to load profile: ${e.localizedMessage}"
                 _user.value = null
@@ -74,6 +85,7 @@ class ProfileViewModel : ViewModel() {
             }
         }
     }
+
 
     fun clearError() {
         _error.value = null

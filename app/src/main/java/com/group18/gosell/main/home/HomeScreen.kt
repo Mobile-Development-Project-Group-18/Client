@@ -241,7 +241,7 @@ fun HomeScreen(
                                             )
                                         )
                                     },
-                                    isInWishlist = wishlistItems.contains(product.id),
+                                    isInWishlist = wishlistItems.any { it.productId == product.id },
                                     onToggleWishlist = { productId ->
                                         homeViewModel.toggleWishlist(
                                             productId

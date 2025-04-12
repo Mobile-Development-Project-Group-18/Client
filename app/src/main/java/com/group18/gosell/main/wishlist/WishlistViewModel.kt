@@ -1,11 +1,13 @@
-package com.group18.gosell.main.wishlist
+ package com.group18.gosell.main.wishlist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.group18.gosell.data.model.Product
+import com.group18.gosell.data.model.RetrofitInstance.api
 import com.group18.gosell.data.model.User
+import com.group18.gosell.data.model.WishList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -20,6 +22,9 @@ data class WishlistState(
 class WishlistViewModel : ViewModel() {
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
+
+    private val _wishlistItems = MutableStateFlow<List<WishList>>(emptyList())
+    val wishlistItems: StateFlow<List<WishList>> = _wishlistItems
     
     private val _uiState = MutableStateFlow(WishlistState(isLoading = true))
     val uiState: StateFlow<WishlistState> = _uiState
@@ -33,47 +38,62 @@ class WishlistViewModel : ViewModel() {
             _uiState.value = WishlistState(isLoading = true)
             try {
                 val userId = auth.currentUser?.uid ?: throw Exception("User not logged in")
-                val userDoc = db.collection("users").document(userId).get().await()
-                val user = userDoc.toObject(User::class.java)
-                
-                val wishlistProducts = mutableListOf<Product>()
-                user?.wishlist?.forEach { productId ->
+
+                val wishlist = api.getUserWishList(userId)
+
+                _wishlistItems.value = wishlist
+
+                val wishlistProducts = wishlist.mapNotNull { item ->
                     try {
-                        val productDoc = db.collection("products").document(productId).get().await()
-                        productDoc.toObject(Product::class.java)?.let { product ->
-                            wishlistProducts.add(product.copy(id = productDoc.id))
+                        val response = api.getProductById(item.productId)
+                        if (response.isSuccessful) {
+                            response.body()
+                        } else {
+                            null
                         }
                     } catch (e: Exception) {
-                        println("Failed to load product $productId: ${e.message}")
+                        println("Failed to load product ${item.productId}: ${e.message}")
+                        null
                     }
                 }
-                
+
                 _uiState.value = WishlistState(products = wishlistProducts)
+
             } catch (e: Exception) {
                 _uiState.value = WishlistState(error = e.localizedMessage)
             }
         }
     }
 
+
     fun removeFromWishlist(productId: String) {
         viewModelScope.launch {
             try {
-                val userId = auth.currentUser?.uid ?: throw Exception("User not logged in")
-                val userRef = db.collection("users").document(userId)
-                
-                db.runTransaction { transaction ->
-                    val snapshot = transaction.get(userRef)
-                    val currentUser = snapshot.toObject(User::class.java)
-                    val updatedWishlist = currentUser?.wishlist?.filter { it != productId } ?: emptyList()
-                    transaction.update(userRef, "wishlist", updatedWishlist)
-                }.await()
+                val currentWishList = _wishlistItems.value
+                val existingFavorite = currentWishList.find { it.productId == productId }
 
-                loadWishlist()
+                if (existingFavorite?.favoriteId != null) {
+                    val response = api.removeWishList(existingFavorite.favoriteId)
+                    if (response.isSuccessful) {
+
+                        _wishlistItems.value = currentWishList.filterNot { it.productId == productId }
+
+                        val updatedProducts = _uiState.value.products.filterNot { it.id == productId }
+                        _uiState.value = _uiState.value.copy(products = updatedProducts)
+                    } else {
+                        _uiState.value = _uiState.value.copy(error = "Failed to remove from wishlist")
+                    }
+                } else {
+                    _uiState.value = _uiState.value.copy(error = "WishList not found")
+                }
+
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.localizedMessage)
             }
         }
     }
+
+
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)

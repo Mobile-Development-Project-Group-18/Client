@@ -1,11 +1,13 @@
 package com.group18.gosell.main.detail
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.group18.gosell.data.model.Chat
 import com.group18.gosell.data.model.Product
+import com.group18.gosell.data.model.RetrofitInstance.api
 import com.group18.gosell.data.model.User
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -43,14 +45,12 @@ class ProductDetailViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = ProductDetailState(isLoading = true)
             try {
-                val productDoc = db.collection("products").document(productId).get().await()
-                val product = productDoc.toObject(Product::class.java)?.copy(id = productDoc.id)
-
-                if (product == null) {
+                val response = api.getProductById(productId)
+                if (!response.isSuccessful || response.body() == null) {
                     _uiState.value = ProductDetailState(error = "Product not found.", isLoading = false)
                     return@launch
                 }
-
+                
                 val currentUser = auth.currentUser
                 var isInWishlist = false
                 var currentUserData: User? = null
@@ -59,24 +59,34 @@ class ProductDetailViewModel : ViewModel() {
                     try {
                         val userDoc = db.collection("users").document(currentUser.uid).get().await()
                         currentUserData = userDoc.toObject(User::class.java)
+
                         isInWishlist = currentUserData?.wishlist?.contains(productId) ?: false
+
                     } catch (userError: Exception) {
-                        println("Warning: Could not fetch current user data: ${userError.message}")
+                        println("Warning: Could not fetch current user data from Firestore: ${userError.message}")
                     }
                 }
+
 
 
                 var seller: User? = null
                 if (product.sellerId.isNotBlank() && product.sellerId != currentUser?.uid) {
                     try {
-                        val sellerDoc = db.collection("users").document(product.sellerId).get().await()
-                        seller = sellerDoc.toObject(User::class.java)?.copy(id = sellerDoc.id)
-                    } catch (sellerError: Exception) {
-                        println("Warning: Could not fetch seller info for product $productId: ${sellerError.message}")
+                        val response = api.getUserById(product.sellerId)
+                        if (response.isSuccessful) {
+                            val user = response.body()
+                            seller = user?.copy(id = product.sellerId)
+                            Log.d("Seller", "Seller: ${seller}")
+                        } else {
+                            println("Failed to fetch seller: ${response.code()} ${response.message()}")
+                        }
+                    } catch (e: Exception) {
+                        println("Warning: Could not fetch seller info for product $productId: ${e.message}")
                     }
                 } else if (product.sellerId == currentUser?.uid) {
                     seller = currentUserData
                 }
+
 
                 _uiState.value = ProductDetailState(
                     product = product,
