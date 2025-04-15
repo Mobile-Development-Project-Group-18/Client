@@ -50,21 +50,22 @@ class ProductDetailViewModel : ViewModel() {
                     _uiState.value = ProductDetailState(error = "Product not found.", isLoading = false)
                     return@launch
                 }
-                
+
+                val product = response.body()!!
+
                 val currentUser = auth.currentUser
-                var isInWishlist = false
                 var currentUserData: User? = null
 
-                if (currentUser != null) {
+                val isInWishlist = if (currentUser != null) {
                     try {
-                        val userDoc = db.collection("users").document(currentUser.uid).get().await()
-                        currentUserData = userDoc.toObject(User::class.java)
-
-                        isInWishlist = currentUserData?.wishlist?.contains(productId) ?: false
-
-                    } catch (userError: Exception) {
-                        println("Warning: Could not fetch current user data from Firestore: ${userError.message}")
+                        val wishlist = api.getUserWishList(currentUser.uid)
+                        wishlist.any { it.productId == productId }
+                    } catch (e: Exception) {
+                        println("Failed to fetch wishlist: ${e.message}")
+                        false
                     }
+                } else {
+                    false
                 }
 
 
