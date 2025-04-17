@@ -19,12 +19,15 @@ import com.group18.gosell.main.MainScreen
 import com.group18.gosell.main.detail.ProductDetailScreen
 import com.group18.gosell.main.listings.UserListingsScreen
 import com.group18.gosell.main.messages.ChatDetailScreen
+import com.group18.gosell.main.wishlist.WishlistViewModel
 
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = viewModel()
     val authState by authViewModel.authState.collectAsState()
+    val wishlistViewModel: WishlistViewModel = viewModel()
+
 
     val startDestination = remember(authState) {
         when (authState) {
@@ -47,7 +50,7 @@ fun AppNavigation() {
         }
         composable(Screen.Main.route) {
             if (authState == AuthViewModel.AuthenticationState.AUTHENTICATED) {
-                MainScreen(mainNavController = navController, authViewModel = authViewModel)
+                MainScreen(mainNavController = navController, authViewModel = authViewModel, wishlistViewModel = wishlistViewModel)
             }
         }
         composable(Screen.UserListings.route) {

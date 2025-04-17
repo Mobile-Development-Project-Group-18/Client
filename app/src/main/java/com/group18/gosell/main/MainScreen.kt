@@ -44,6 +44,7 @@ import com.group18.gosell.main.profile.ProfileViewModel
 import com.group18.gosell.main.sell.SellScreen
 import com.group18.gosell.main.sell.SellViewModel
 import com.group18.gosell.main.wishlist.WishlistScreen
+import com.group18.gosell.main.wishlist.WishlistViewModel
 import com.group18.gosell.navigation.Screen
 import com.group18.gosell.ui.theme.GoSellIconTint
 import com.group18.gosell.ui.theme.GosellTheme
@@ -56,7 +57,7 @@ data class BottomNavItem(
 )
 
 @Composable
-fun MainScreen(mainNavController: NavHostController, authViewModel: AuthViewModel) {
+fun MainScreen(mainNavController: NavHostController, authViewModel: AuthViewModel, wishlistViewModel: WishlistViewModel) {
     val bottomNavController = rememberNavController()
     val mainViewModel: MainViewModel = viewModel()
 
@@ -69,7 +70,8 @@ fun MainScreen(mainNavController: NavHostController, authViewModel: AuthViewMode
                 bottomNavController = bottomNavController,
                 mainNavController = mainNavController,
                 modifier = Modifier.padding(innerPadding),
-                authViewModel = authViewModel
+                authViewModel = authViewModel,
+                wishlistViewModel = wishlistViewModel
             )
         }
     }
@@ -147,7 +149,8 @@ fun BottomNavGraph(
     bottomNavController: NavHostController,
     mainNavController: NavHostController,
     modifier: Modifier = Modifier,
-    authViewModel: AuthViewModel
+    authViewModel: AuthViewModel,
+    wishlistViewModel: WishlistViewModel
 ) {
     NavHost(
         navController = bottomNavController,
@@ -156,7 +159,7 @@ fun BottomNavGraph(
     ) {
         composable(Screen.Home.route) {
             val homeViewModel: HomeViewModel = viewModel()
-            HomeScreen(homeViewModel = homeViewModel, mainNavController = mainNavController)
+            HomeScreen(homeViewModel = homeViewModel, mainNavController = mainNavController, wishlistViewModel = wishlistViewModel)
         }
         composable(Screen.Messages.route) {
             MessagesScreen(navController = mainNavController)
@@ -169,7 +172,8 @@ fun BottomNavGraph(
             WishlistScreen(
                 onProductClick = { productId ->
                     mainNavController.navigate(Screen.ProductDetail.createRoute(productId))
-                }
+                },
+                viewModel = wishlistViewModel
             )
         }
         composable(Screen.Profile.route) {
