@@ -38,7 +38,7 @@ class ProductDetailViewModel : ViewModel() {
             return
         }
         if (_uiState.value.isLoading || (_uiState.value.product?.id == productId && _uiState.value.seller != null)) {
-            _uiState.value = _uiState.value.copy(navigateToChatId = null) // Clear navigation trigger on re-fetch/re-entry
+            _uiState.value = _uiState.value.copy(navigateToChatId = null)
             return
         }
 
@@ -189,6 +189,7 @@ class ProductDetailViewModel : ViewModel() {
                             sellerId to seller.avatar
                         ),
                         productContext = product.id,
+                        productName = product.name,
                         lastMessage = null,
                         lastMessageTimestamp = null,
                         unreadCounts = mapOf(currentUserId to 0, sellerId to 0)

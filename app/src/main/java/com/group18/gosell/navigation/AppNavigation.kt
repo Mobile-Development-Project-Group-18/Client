@@ -19,11 +19,17 @@ import com.group18.gosell.main.MainScreen
 import com.group18.gosell.main.detail.ProductDetailScreen
 import com.group18.gosell.main.listings.UserListingsScreen
 import com.group18.gosell.main.messages.ChatDetailScreen
+import com.group18.gosell.main.notification.NotificationScreen
+import com.group18.gosell.main.notification.NotificationViewModel
+import com.group18.gosell.main.offer.SendOfferScreen
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = viewModel()
+    val notificationViewModel: NotificationViewModel = viewModel()
     val authState by authViewModel.authState.collectAsState()
 
     val startDestination = remember(authState) {
@@ -47,7 +53,11 @@ fun AppNavigation() {
         }
         composable(Screen.Main.route) {
             if (authState == AuthViewModel.AuthenticationState.AUTHENTICATED) {
-                MainScreen(mainNavController = navController, authViewModel = authViewModel)
+                MainScreen(
+                    mainNavController = navController,
+                    authViewModel = authViewModel,
+                    notificationViewModel = notificationViewModel
+                )
             }
         }
         composable(Screen.UserListings.route) {
@@ -69,7 +79,7 @@ fun AppNavigation() {
             route = Screen.ChatDetail.route,
             arguments = listOf(
                 navArgument("chatId") { type = NavType.StringType },
-                navArgument("otherUserId") { type = NavType.StringType } // Keep as string, handle "null" string if needed
+                navArgument("otherUserId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
             if (authState == AuthViewModel.AuthenticationState.AUTHENTICATED) {
@@ -78,7 +88,37 @@ fun AppNavigation() {
                 ChatDetailScreen(
                     navController = navController,
                     chatId = chatId,
-                    otherUserId = if (otherUserId == "null" || otherUserId == "unknown") null else otherUserId // Handle the "null" string case
+                    otherUserId = if (otherUserId == "null" || otherUserId == "unknown") null else otherUserId
+                )
+            }
+        }
+
+        composable(
+            route = Screen.SendOffer.route,
+            arguments = Screen.SendOffer.arguments
+        ) { backStackEntry ->
+            val productId = backStackEntry.arguments?.getString(Screen.SendOffer.ARG_PRODUCT_ID)
+            val encodedProductName = backStackEntry.arguments?.getString(Screen.SendOffer.ARG_PRODUCT_NAME)
+            val sellerId = backStackEntry.arguments?.getString(Screen.SendOffer.ARG_SELLER_ID)
+            val encodedInitialOffer = backStackEntry.arguments?.getString(Screen.SendOffer.ARG_INITIAL_OFFER)
+
+            val productName = encodedProductName?.let { URLDecoder.decode(it, StandardCharsets.UTF_8.toString()) }
+            val initialOffer = encodedInitialOffer?.let { URLDecoder.decode(it, StandardCharsets.UTF_8.toString()) }
+
+            SendOfferScreen(
+                navController = navController,
+                productId = productId,
+                productName = productName,
+                sellerId = sellerId,
+                initialOffer = initialOffer
+            )
+        }
+
+        composable(Screen.Notifications.route) {
+            if (authState == AuthViewModel.AuthenticationState.AUTHENTICATED) {
+                NotificationScreen(
+                    navController = navController,
+                    viewModel = notificationViewModel
                 )
             }
         }
@@ -96,7 +136,7 @@ fun AppNavigation() {
         } else if (authState == AuthViewModel.AuthenticationState.AUTHENTICATED &&
             (currentRoute == Screen.Login.route || currentRoute == Screen.Signup.route)) {
             navController.navigate(Screen.Main.route) {
-                popUpTo(navController.graph.findStartDestination().id) { inclusive = true } // Pop everything including Login/Signup
+                popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
                 launchSingleTop = true
             }
         }

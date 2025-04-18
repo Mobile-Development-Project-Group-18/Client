@@ -7,20 +7,25 @@ import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MailOutline
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.MailOutline
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -39,6 +44,7 @@ import com.group18.gosell.auth.AuthViewModel
 import com.group18.gosell.main.home.HomeScreen
 import com.group18.gosell.main.home.HomeViewModel
 import com.group18.gosell.main.messages.MessagesScreen
+import com.group18.gosell.main.notification.NotificationViewModel
 import com.group18.gosell.main.profile.ProfileScreen
 import com.group18.gosell.main.profile.ProfileViewModel
 import com.group18.gosell.main.sell.SellScreen
@@ -55,14 +61,40 @@ data class BottomNavItem(
     val unselectedIcon: ImageVector
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(mainNavController: NavHostController, authViewModel: AuthViewModel) {
+fun MainScreen(
+    mainNavController: NavHostController,
+    authViewModel: AuthViewModel,
+    notificationViewModel: NotificationViewModel
+) {
     val bottomNavController = rememberNavController()
     val mainViewModel: MainViewModel = viewModel()
 
     val totalUnreadCount by mainViewModel.totalUnreadCount.collectAsState()
+    val notificationState by notificationViewModel.uiState.collectAsState()
+
     GosellTheme {
         Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("GoSell") },
+                    actions = {
+                        IconButton(onClick = { mainNavController.navigate(Screen.Notifications.route) }) {
+                            BadgedBox(badge = {
+                                if (notificationState.unreadCount > 0) {
+                                    Badge()
+                                }
+                            }) {
+                                Icon(
+                                    Icons.Outlined.Notifications,
+                                    contentDescription = "Notifications"
+                                )
+                            }
+                        }
+                    }
+                )
+            },
             bottomBar = { BottomNavigationBar(navController = bottomNavController, totalUnreadCount = totalUnreadCount) }
         ) { innerPadding ->
             BottomNavGraph(
@@ -74,6 +106,7 @@ fun MainScreen(mainNavController: NavHostController, authViewModel: AuthViewMode
         }
     }
 }
+
 @Composable
 fun BottomNavigationBar(navController: NavHostController, totalUnreadCount: Int) {
     val items = listOf(

@@ -5,30 +5,44 @@ import java.util.Date
 
 data class Chat(
     var id: String = "",
-    val participants: List<String> = emptyList(), // List of User IDs
-    val participantNames: Map<String, String> = emptyMap(), // userId -> "FirstName LastName"
-    val participantAvatars: Map<String, String?> = emptyMap(), // userId -> avatarUrl
-    val productContext: String? = null, // Optional: Product ID this chat is about
+    val participants: List<String> = emptyList(),
+    val participantNames: Map<String, String> = emptyMap(),
+    val participantAvatars: Map<String, String?> = emptyMap(),
+    val productContext: String? = null,
+    val productName: String? = null,
     val lastMessage: String? = null,
     @ServerTimestamp val lastMessageTimestamp: Date? = null,
-    val unreadCounts: Map<String, Int> = emptyMap() // userId -> count of unread messages
+    val unreadCounts: Map<String, Int> = emptyMap()
 ) {
-    constructor() : this("", emptyList(), emptyMap(), emptyMap(), null, null, null, emptyMap())
+    constructor() : this("", emptyList(), emptyMap(), emptyMap(), null, null, null, null, emptyMap())
 
     fun otherParticipantId(currentUserId: String): String? {
         return participants.firstOrNull { it != currentUserId }
     }
 }
 
-// Represents a single message within a chat
 data class Message(
     var id: String = "",
     val chatId: String = "",
     val senderId: String = "",
     val text: String = "",
     @ServerTimestamp val timestamp: Date? = null,
-    // isRead status can be managed by comparing message timestamp with last read timestamp,
-    // or using the unreadCounts in the Chat object. We'll use unreadCounts here.
+    val isOffer: Boolean = false
 ) {
-    constructor() : this("", "", "", "", null)
+    constructor() : this("", "", "", "", null, false)
+}
+
+data class Notification(
+    var id: String = "",
+    val receiverId: String = "",
+    val senderId: String = "",
+    val senderName: String = "",
+    val chatId: String = "",
+    val messageId: String = "",
+    val productName: String = "",
+    val offerText: String = "",
+    @ServerTimestamp val timestamp: Date? = null,
+    var read: Boolean = false
+) {
+    constructor() : this("", "", "", "", "", "", "", "", null, false)
 }

@@ -44,12 +44,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -73,7 +70,6 @@ import com.group18.gosell.ui.theme.GoSellColorSecondary
 import com.group18.gosell.ui.theme.GoSellIconTint
 import com.group18.gosell.ui.theme.GoSellRed
 import com.group18.gosell.ui.theme.GoSellTextSecondary
-import com.group18.gosell.ui.theme.GosellTheme
 import com.group18.myapplication.R
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -85,7 +81,8 @@ data class CategoryItemData(val name: String, val icon: ImageVector)
 @Composable
 fun HomeScreen(
     homeViewModel: HomeViewModel,
-    mainNavController: NavHostController
+    mainNavController: NavHostController,
+    modifier: Modifier = Modifier
 ) {
     val products by homeViewModel.products.collectAsState()
     val isLoading by homeViewModel.isLoading.collectAsState()
@@ -105,151 +102,111 @@ fun HomeScreen(
         homeViewModel.fetchProducts()
     }
 
-    GosellTheme {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("Gosell", fontWeight = FontWeight.Bold) },
-                    actions = {
-                        IconButton(onClick = { /* TODO: Search Action */ }) {
-                            Icon(
-                                Icons.Filled.Search,
-                                contentDescription = "Search Items",
-                                tint = GoSellIconTint
+
+    Box(modifier = modifier.fillMaxSize()) {
+        if (isLoading) {
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+
+                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                    Column {
+                        Text(
+                            "Categories",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                            modifier = Modifier.padding(
+                                start = 4.dp,
+                                top = 8.dp,
+                                bottom = 8.dp
                             )
+                        )
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            contentPadding = PaddingValues(start = 4.dp, end = 4.dp)
+                        ) {
+                            items(categories.size) { index ->
+                                CategoryItem(category = categories[index])
+                            }
                         }
-                        IconButton(onClick = { /* TODO: Filter Action */ }) {
-                            Icon(
-                                Icons.Filled.FilterList,
-                                contentDescription = "Filter Items",
-                                tint = GoSellIconTint
+                        Spacer(Modifier.height(16.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "Latest Items",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
                             )
-                        }
-                        IconButton(onClick = { /* TODO: Notifications Action */ }) {
-                            BadgedBox(badge = { Badge { Text("2") } }) {
+                            TextButton(onClick = { /* TODO */ }) {
+                                Text("See All")
                                 Icon(
-                                    Icons.Filled.NotificationsNone,
-                                    contentDescription = "Notifications",
-                                    tint = GoSellIconTint
+                                    Icons.AutoMirrored.Filled.ArrowForwardIos,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp)
                                 )
                             }
                         }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background,
-                        titleContentColor = MaterialTheme.colorScheme.onBackground
-                    )
-                )
-            }
-        ) { paddingValues ->
-            Box(modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)) {
-                if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+
+                    }
+                }
+
+                if (error != null) {
+                    item(span = {
+                        androidx.compose.foundation.lazy.grid.GridItemSpan(
+                            maxLineSpan
+                        )
+                    }) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = error ?: "An unknown error occurred",
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            Button(onClick = { homeViewModel.fetchProducts() }) {
+                                Text("Retry")
+                            }
+                        }
+                    }
+                } else if (products.isEmpty() && !isLoading) {
+                    item(span = {
+                        androidx.compose.foundation.lazy.grid.GridItemSpan(
+                            maxLineSpan
+                        )
+                    }) {
+                        Text(
+                            "No products found. Sell something!",
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
                 } else {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-
-                        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                            Column {
-                                Text(
-                                    "Categories",
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                                    modifier = Modifier.padding(
-                                        start = 4.dp,
-                                        top = 8.dp,
-                                        bottom = 8.dp
+                    items(products, key = { it.id }) { product ->
+                        ProductItem(
+                            product = product,
+                            onItemClick = { productId ->
+                                mainNavController.navigate(
+                                    Screen.ProductDetail.createRoute(
+                                        productId
                                     )
                                 )
-                                LazyRow(
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                    contentPadding = PaddingValues(start = 4.dp, end = 4.dp)
-                                ) {
-                                    items(categories.size) { index ->
-                                        CategoryItem(category = categories[index])
-                                    }
-                                }
-                                Spacer(Modifier.height(16.dp))
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 4.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        "Latest Items",
-                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
-                                    )
-                                    TextButton(onClick = { /* TODO */ }) {
-                                        Text("See All")
-                                        Icon(
-                                            Icons.AutoMirrored.Filled.ArrowForwardIos,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                    }
-                                }
-
-                            }
-                        }
-
-                        if (error != null) {
-                            item(span = {
-                                androidx.compose.foundation.lazy.grid.GridItemSpan(
-                                    maxLineSpan
-                                )
-                            }) {
-                                Column(
-                                    modifier = Modifier.padding(16.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Text(
-                                        text = error ?: "An unknown error occurred",
-                                        color = MaterialTheme.colorScheme.error
-                                    )
-                                    Button(onClick = { homeViewModel.fetchProducts() }) {
-                                        Text("Retry")
-                                    }
-                                }
-                            }
-                        } else if (products.isEmpty() && !isLoading) {
-                            item(span = {
-                                androidx.compose.foundation.lazy.grid.GridItemSpan(
-                                    maxLineSpan
-                                )
-                            }) {
-                                Text(
-                                    "No products found. Sell something!",
-                                    modifier = Modifier.padding(16.dp)
+                            },
+                            isInWishlist = wishlistItems.any { it.productId == product.id },
+                            onToggleWishlist = { productId ->
+                                homeViewModel.toggleWishlist(
+                                    productId
                                 )
                             }
-                        } else {
-                            items(products, key = { it.id }) { product ->
-                                ProductItem(
-                                    product = product,
-                                    onItemClick = { productId ->
-                                        mainNavController.navigate(
-                                            Screen.ProductDetail.createRoute(
-                                                productId
-                                            )
-                                        )
-                                    },
-                                    isInWishlist = wishlistItems.any { it.productId == product.id },
-                                    onToggleWishlist = { productId ->
-                                        homeViewModel.toggleWishlist(
-                                            productId
-                                        )
-                                    }
-                                )
-                            }
-                        }
+                        )
                     }
                 }
             }

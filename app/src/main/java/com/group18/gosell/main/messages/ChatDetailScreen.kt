@@ -51,8 +51,12 @@ fun ChatDetailScreen(
     val listState = rememberLazyListState()
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    val otherUserName = otherUserId?.let { uiState.chatInfo?.participantNames?.get(it) } ?: "Chat"
-
+    val otherUserName = otherUserId?.let { uiState.chatInfo?.participantNames?.get(it) } ?: "User"
+    val chatTitle = if (!uiState.chatInfo?.productName.isNullOrBlank()) {
+        "$otherUserName - ${uiState.chatInfo?.productName}"
+    } else {
+        otherUserName
+    }
 
     LaunchedEffect(chatId, otherUserId) {
         if (!chatId.isNullOrBlank()) {
@@ -72,7 +76,7 @@ fun ChatDetailScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text(otherUserName, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
+                    title = { Text(chatTitle, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
                     navigationIcon = {
                         IconButton(onClick = { navController.popBackStack() }) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
