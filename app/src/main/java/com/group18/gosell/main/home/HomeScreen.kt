@@ -98,6 +98,10 @@ fun HomeScreen(
     val error by homeViewModel.error.collectAsState()
     val wishlistItems by homeViewModel.wishlistItems.collectAsState()
 
+    // --- SEARCH STATE ---
+    var searchQuery by remember { mutableStateOf("") }
+    var isSearching by remember { mutableStateOf(false) }
+
     
     
     
@@ -263,9 +267,30 @@ fun HomeScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("Gosell", fontWeight = FontWeight.Bold) },
+                    title = {
+                        if (isSearching) {
+                            OutlinedTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                placeholder = { Text("Search products...") },
+                                singleLine = true,
+                                maxLines = 1,
+                                trailingIcon = {
+                                    IconButton(onClick = {
+                                        searchQuery = ""
+                                        isSearching = false
+                                    }) {
+                                        Icon(Icons.Default.FilterList, contentDescription = "Close Search")
+                                    }
+                                }
+                            )
+                        } else {
+                            Text("Gosell", fontWeight = FontWeight.Bold)
+                        }
+                    },
                     actions = {
-                        IconButton(onClick = { /* TODO: Search Action */ }) {
+                        IconButton(onClick = { isSearching = !isSearching }) {
                             Icon(
                                 Icons.Filled.Search,
                                 contentDescription = "Search Items",
@@ -386,22 +411,30 @@ fun HomeScreen(
                             }
                         } else {
                             // Sort products based on sortOption
-                            // Filtering and sorting logic
-val filteredAndSortedProducts = when {
-    // Category filter
-    mainSortType == "Category" && selectedCategory != null ->
-        products.filter { it.type.equals(selectedCategory, ignoreCase = true) }
-    // Price sort
-    mainSortType == "Price" && priceSortDirection == "Low to High" ->
-        products.sortedBy { it.price ?: Double.MAX_VALUE }
-    mainSortType == "Price" && priceSortDirection == "High to Low" ->
-        products.sortedByDescending { it.price ?: Double.MIN_VALUE }
-    // Location sort (replace 'place' with 'zipCode' if available)
-    mainSortType == "Location" && zipCodeInput.length == 5 ->
-        products.filter { it.place == zipCodeInput }
-    // Default: no sort/filter
-    else -> products
-}
+                            // Filtering, searching, and sorting logic
+val filteredAndSortedProducts = products
+    // 1. Search filter
+    .filter { product ->
+        if (searchQuery.isBlank()) true
+        else {
+            val q = searchQuery.trim().lowercase()
+            product.name.lowercase().contains(q) || (product.description?.lowercase()?.contains(q) ?: false)
+        }
+    }
+    // 2. Apply sort/filter
+    .let { list ->
+        when {
+            mainSortType == "Category" && selectedCategory != null ->
+                list.filter { it.type.equals(selectedCategory, ignoreCase = true) }
+            mainSortType == "Price" && priceSortDirection == "Low to High" ->
+                list.sortedBy { it.price ?: Double.MAX_VALUE }
+            mainSortType == "Price" && priceSortDirection == "High to Low" ->
+                list.sortedByDescending { it.price ?: Double.MIN_VALUE }
+            mainSortType == "Location" && zipCodeInput.length == 5 ->
+                list.filter { it.place == zipCodeInput }
+            else -> list
+        }
+    }
 
                             items(filteredAndSortedProducts, key = { it.id }) { product ->
                                 ProductItem(
