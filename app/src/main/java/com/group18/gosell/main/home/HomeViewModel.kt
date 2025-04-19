@@ -23,9 +23,6 @@ class HomeViewModel : ViewModel() {
     private val _products = MutableStateFlow<List<Product>>(emptyList())
     val products: StateFlow<List<Product>> = _products
 
-    private val _wishlistItems = MutableStateFlow<List<WishList>>(emptyList())
-    val wishlistItems: StateFlow<List<WishList>> = _wishlistItems
-
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
@@ -34,7 +31,6 @@ class HomeViewModel : ViewModel() {
 
     init {
         fetchProducts()
-        fetchWishlist()
     }
 
     fun fetchProducts() {
@@ -55,51 +51,7 @@ class HomeViewModel : ViewModel() {
     }
 
 
-    private fun fetchWishlist() {
-        val userId = auth.currentUser?.uid ?: return
 
-        viewModelScope.launch {
-            try {
-                val wishlist = api.getUserWishList(userId)
-                _wishlistItems.value = wishlist
-            } catch (e: Exception) {
-                _error.value = "Failed to load wishlist: ${e.localizedMessage}"
-            }
-        }
-    }
-
-    fun toggleWishlist(productId: String) {
-        val currentUser = auth.currentUser ?: return
-
-        viewModelScope.launch {
-            try {
-                val currentWishList = _wishlistItems.value
-                val existingFavorite = currentWishList.find { it.productId == productId }
-
-                if (existingFavorite != null) {
-                    // Remove
-                    val response = api.removeWishList(existingFavorite.favoriteId!!)
-                    if (response.isSuccessful) {
-                        _wishlistItems.value = currentWishList.filterNot { it.productId == productId }
-                    } else {
-                        _error.value = "Failed to remove favorite"
-                    }
-                } else {
-                    // Add
-                    val newWish = WishList(userId = currentUser.uid, productId = productId)
-                    val response = api.addWishList(newWish)
-                    if (response.isSuccessful) {
-                        fetchWishlist() // refresh to get correct IDs from backend
-                    } else {
-                        _error.value = "Failed to add favorite"
-                    }
-                }
-
-            } catch (e: Exception) {
-                _error.value = "Failed to update wishlist: ${e.message}"
-            }
-        }
-    }
 
     fun clearError() {
         _error.value = null

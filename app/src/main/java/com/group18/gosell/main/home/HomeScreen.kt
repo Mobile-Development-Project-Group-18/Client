@@ -68,6 +68,7 @@ import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.group18.gosell.data.model.Product
 import com.group18.gosell.data.model.formatPrice
+import com.group18.gosell.main.wishlist.WishlistViewModel
 import com.group18.gosell.navigation.Screen
 import com.group18.gosell.ui.theme.GoSellColorSecondary
 import com.group18.gosell.ui.theme.GoSellIconTint
@@ -85,12 +86,13 @@ data class CategoryItemData(val name: String, val icon: ImageVector)
 @Composable
 fun HomeScreen(
     homeViewModel: HomeViewModel,
-    mainNavController: NavHostController
+    mainNavController: NavHostController,
+    wishlistViewModel: WishlistViewModel
 ) {
     val products by homeViewModel.products.collectAsState()
     val isLoading by homeViewModel.isLoading.collectAsState()
     val error by homeViewModel.error.collectAsState()
-    val wishlistItems by homeViewModel.wishlistItems.collectAsState()
+    val wishlistItems by wishlistViewModel.wishlistItems.collectAsState()
 
     val categories = listOf(
         CategoryItemData("Clothing", Icons.Default.Checkroom),
@@ -243,7 +245,7 @@ fun HomeScreen(
                                     },
                                     isInWishlist = wishlistItems.any { it.productId == product.id },
                                     onToggleWishlist = { productId ->
-                                        homeViewModel.toggleWishlist(
+                                        wishlistViewModel.toggleWishlist(
                                             productId
                                         )
                                     }

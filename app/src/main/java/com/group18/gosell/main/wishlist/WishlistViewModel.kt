@@ -29,6 +29,9 @@ class WishlistViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(WishlistState(isLoading = true))
     val uiState: StateFlow<WishlistState> = _uiState
 
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error
+
     init {
         loadWishlist()
     }
@@ -89,6 +92,41 @@ class WishlistViewModel : ViewModel() {
 
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.localizedMessage)
+            }
+        }
+    }
+
+    fun toggleWishlist(productId: String) {
+        val currentUser = auth.currentUser ?: return
+
+        viewModelScope.launch {
+            try {
+                val currentWishList = _wishlistItems.value
+                val existingFavorite = currentWishList.find { it.productId == productId }
+
+                if (existingFavorite != null) {
+                    // Remove
+                    val response = api.removeWishList(existingFavorite.favoriteId!!)
+                    if (response.isSuccessful) {
+                        _wishlistItems.value = currentWishList.filterNot { it.productId == productId }
+                        val updatedProducts = _uiState.value.products.filterNot { it.id == productId }
+                        _uiState.value = _uiState.value.copy(products = updatedProducts)
+                    } else {
+                        _error.value = "Failed to remove favorite"
+                    }
+                } else {
+                    // Add
+                    val newWish = WishList(userId = currentUser.uid, productId = productId)
+                    val response = api.addWishList(newWish)
+                    if (response.isSuccessful) {
+                        loadWishlist() // refresh to get correct IDs from backend
+                    } else {
+                        _error.value = "Failed to add favorite"
+                    }
+                }
+
+            } catch (e: Exception) {
+                _error.value = "Failed to update wishlist: ${e.message}"
             }
         }
     }
