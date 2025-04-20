@@ -2,6 +2,7 @@ package com.group18.gosell.main.detail
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -141,20 +142,42 @@ fun ProductDetailScreen(
             },
             floatingActionButton = {
                 if (product != null && seller != null && seller.id != currentUserId) {
-                    ExtendedFloatingActionButton(
-                        onClick = { viewModel.initiateOrGetChat() },
-                        icon = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Button(
+                            onClick = { viewModel.initiateOrGetChat() },
+                            enabled = !uiState.isChatLoading,
+                            modifier = Modifier.weight(1f).padding(end = 4.dp)
+                        ) {
                             if (uiState.isChatLoading) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Loading Chat...")
                             } else {
-                                Icon(Icons.AutoMirrored.Filled.Message, "Message Seller")
+                                Icon(Icons.AutoMirrored.Filled.Message, "Message Seller", modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Message Seller")
                             }
-                        },
-                        text = { Text("Message Seller") },
-                        expanded = true,
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
+                        }
+
+                        Button(
+                            onClick = {
+                                val route = Screen.SendOffer.createRoute(
+                                    productId = product.id,
+                                    productName = product.name,
+                                    sellerId = seller.id,
+                                    initialOffer = product.price.toString()
+                                )
+                                navController.navigate(route)
+                            },
+                            modifier = Modifier.weight(1f).padding(start = 4.dp)
+                        ) {
+                            Text("Send Offer")
+                        }
+                    }
                 }
             },
             floatingActionButtonPosition = FabPosition.Center

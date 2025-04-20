@@ -47,12 +47,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -80,7 +77,6 @@ import com.group18.gosell.ui.theme.GoSellColorSecondary
 import com.group18.gosell.ui.theme.GoSellIconTint
 import com.group18.gosell.ui.theme.GoSellRed
 import com.group18.gosell.ui.theme.GoSellTextSecondary
-import com.group18.gosell.ui.theme.GosellTheme
 import com.group18.myapplication.R
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -93,6 +89,7 @@ data class CategoryItemData(val name: String, val icon: ImageVector)
 fun HomeScreen(
     homeViewModel: HomeViewModel,
     mainNavController: NavHostController,
+    modifier: Modifier = Modifier,
     wishlistViewModel: WishlistViewModel
 ) {
     val products by homeViewModel.products.collectAsState()
@@ -103,11 +100,6 @@ fun HomeScreen(
     // --- SEARCH STATE ---
     var searchQuery by remember { mutableStateOf("") }
     var isSearching by remember { mutableStateOf(false) }
-
-    
-    
-    
-    
 
     // --- SORT STATE ---
     var showSortDialog by remember { mutableStateOf(false) }
@@ -247,10 +239,6 @@ fun HomeScreen(
             }
         )
     }
-    
-    
-    
-    
 
     val categories = listOf(
         CategoryItemData("Clothing", Icons.Default.Checkroom),
@@ -299,6 +287,18 @@ fun HomeScreen(
                                 tint = GoSellIconTint
                             )
                         }
+                        // Add notifications from feat/notifications branch
+                        BadgedBox(
+                            badge = { Badge { Text("3") } }
+                        ) {
+                            IconButton(onClick = { /* TODO: Handle notifications */ }) {
+                                Icon(
+                                    Icons.Default.NotificationsNone,
+                                    contentDescription = "Notifications",
+                                    tint = GoSellIconTint
+                                )
+                            }
+                        }
                         IconButton(onClick = { showSortDialog = true }) {
                             Icon(
                                 Icons.Filled.FilterList,
@@ -306,161 +306,145 @@ fun HomeScreen(
                                 tint = GoSellIconTint
                             )
                         }
-                        IconButton(onClick = { /* TODO: Notifications Action */ }) {
-                            BadgedBox(badge = { Badge { Text("2") } }) {
-                                Icon(
-                                    Icons.Filled.NotificationsNone,
-                                    contentDescription = "Notifications",
-                                    tint = GoSellIconTint
-                                )
-                            }
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background,
-                        titleContentColor = MaterialTheme.colorScheme.onBackground
-                    )
+                    }
                 )
-            }
-        ) { paddingValues ->
-            Box(modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)) {
-                if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                } else {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-
-                        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                            Column {
-                                Text(
-                                    "Categories",
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                                    modifier = Modifier.padding(
-                                        start = 4.dp,
-                                        top = 8.dp,
-                                        bottom = 8.dp
-                                    )
-                                )
-                                LazyRow(
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                    contentPadding = PaddingValues(start = 4.dp, end = 4.dp)
-                                ) {
-                                    items(categories.size) { index ->
-                                        CategoryItem(category = categories[index])
-                                    }
-                                }
-                                Spacer(Modifier.height(16.dp))
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 4.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
+            },
+            content = { paddingValues ->
+                Box(modifier = modifier.fillMaxSize().padding(paddingValues)) {
+                    if (isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    } else {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(2),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                                Column {
                                     Text(
-                                        "Latest Items",
-                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
-                                    )
-                                    TextButton(onClick = { /* TODO */ }) {
-                                        Text("See All")
-                                        Icon(
-                                            Icons.AutoMirrored.Filled.ArrowForwardIos,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(14.dp)
+                                        "Categories",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                                        modifier = Modifier.padding(
+                                            start = 4.dp,
+                                            top = 8.dp,
+                                            bottom = 8.dp
                                         )
-                                    }
-                                }
-
-                            }
-                        }
-
-                        if (error != null) {
-                            item(span = {
-                                androidx.compose.foundation.lazy.grid.GridItemSpan(
-                                    maxLineSpan
-                                )
-                            }) {
-                                Column(
-                                    modifier = Modifier.padding(16.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Text(
-                                        text = error ?: "An unknown error occurred",
-                                        color = MaterialTheme.colorScheme.error
                                     )
-                                    Button(onClick = { homeViewModel.fetchProducts() }) {
-                                        Text("Retry")
+                                    LazyRow(
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        contentPadding = PaddingValues(start = 4.dp, end = 4.dp)
+                                    ) {
+                                        items(categories.size) { index ->
+                                            CategoryItem(category = categories[index])
+                                        }
+                                    }
+                                    Spacer(Modifier.height(16.dp))
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 4.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            "Latest Items",
+                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                                        )
+                                        TextButton(onClick = { /* TODO */ }) {
+                                            Text("See All")
+                                            Icon(
+                                                Icons.AutoMirrored.Filled.ArrowForwardIos,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
-                        } else if (products.isEmpty() && !isLoading) {
-                            item(span = {
-                                androidx.compose.foundation.lazy.grid.GridItemSpan(
-                                    maxLineSpan
-                                )
-                            }) {
-                                Text(
-                                    "No products found. Sell something!",
-                                    modifier = Modifier.padding(16.dp)
-                                )
-                            }
-                        } else {
-                            // Sort products based on sortOption
-                            // Filtering, searching, and sorting logic
-val filteredAndSortedProducts = products
-    // 1. Search filter
-    .filter { product ->
-        if (searchQuery.isBlank()) true
-        else {
-            val q = searchQuery.trim().lowercase()
-            product.name.lowercase().contains(q) || (product.description?.lowercase()?.contains(q) ?: false)
-        }
-    }
-    // 2. Apply sort/filter
-    .let { list ->
-        when {
-            mainSortType == "Category" && selectedCategory != null ->
-                list.filter { it.type.equals(selectedCategory, ignoreCase = true) }
-            mainSortType == "Price" && priceSortDirection == "Low to High" ->
-                list.sortedBy { it.price ?: Double.MAX_VALUE }
-            mainSortType == "Price" && priceSortDirection == "High to Low" ->
-                list.sortedByDescending { it.price ?: Double.MIN_VALUE }
-            mainSortType == "Location" && zipCodeInput.length == 5 ->
-                list.filter { it.place == zipCodeInput }
-            else -> list
-        }
-    }
 
-                            items(filteredAndSortedProducts, key = { it.id }) { product ->
-                                ProductItem(
-                                    product = product,
-                                    onItemClick = { productId ->
-                                        mainNavController.navigate(
-                                            Screen.ProductDetail.createRoute(
+                            if (error != null) {
+                                item(span = {
+                                    androidx.compose.foundation.lazy.grid.GridItemSpan(
+                                        maxLineSpan
+                                    )
+                                }) {
+                                    Column(
+                                        modifier = Modifier.padding(16.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            text = error ?: "An unknown error occurred",
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                        Button(onClick = { homeViewModel.fetchProducts() }) {
+                                            Text("Retry")
+                                        }
+                                    }
+                                }
+                            } else if (products.isEmpty() && !isLoading) {
+                                item(span = {
+                                    androidx.compose.foundation.lazy.grid.GridItemSpan(
+                                        maxLineSpan
+                                    )
+                                }) {
+                                    Text(
+                                        "No products found. Sell something!",
+                                        modifier = Modifier.padding(16.dp)
+                                    )
+                                }
+                            } else {
+                                // Sort products based on sortOption
+                                // Filtering, searching, and sorting logic
+                                val filteredAndSortedProducts = products
+                                    // 1. Search filter
+                                    .filter { product ->
+                                        if (searchQuery.isBlank()) true
+                                        else {
+                                            val q = searchQuery.trim().lowercase()
+                                            product.name.lowercase().contains(q) || (product.description?.lowercase()?.contains(q) ?: false)
+                                        }
+                                    }
+                                    // 2. Apply sort/filter
+                                    .let { list ->
+                                        when {
+                                            mainSortType == "Category" && selectedCategory != null ->
+                                                list.filter { it.type.equals(selectedCategory, ignoreCase = true) }
+                                            mainSortType == "Price" && priceSortDirection == "Low to High" ->
+                                                list.sortedBy { it.price ?: Double.MAX_VALUE }
+                                            mainSortType == "Price" && priceSortDirection == "High to Low" ->
+                                                list.sortedByDescending { it.price ?: Double.MIN_VALUE }
+                                            mainSortType == "Location" && zipCodeInput.length == 5 ->
+                                                list.filter { it.place == zipCodeInput }
+                                            else -> list
+                                        }
+                                    }
+
+                                items(filteredAndSortedProducts, key = { it.id }) { product ->
+                                    ProductItem(
+                                        product = product,
+                                        onItemClick = { productId ->
+                                            mainNavController.navigate(
+                                                Screen.ProductDetail.createRoute(
+                                                    productId
+                                                )
+                                            )
+                                        },
+                                        isInWishlist = wishlistItems.any { it.productId == product.id },
+                                        onToggleWishlist = { productId ->
+                                            wishlistViewModel.toggleWishlist(
                                                 productId
                                             )
-                                        )
-                                    },
-                                    isInWishlist = wishlistItems.any { it.productId == product.id },
-                                    onToggleWishlist = { productId ->
-                                        wishlistViewModel.toggleWishlist(
-                                            productId
-                                        )
-                                    }
-                                )
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
-        }
+        )
     }
 }
 
