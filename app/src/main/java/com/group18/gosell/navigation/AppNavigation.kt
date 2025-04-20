@@ -22,6 +22,7 @@ import com.group18.gosell.main.messages.ChatDetailScreen
 import com.group18.gosell.main.notification.NotificationScreen
 import com.group18.gosell.main.notification.NotificationViewModel
 import com.group18.gosell.main.offer.SendOfferScreen
+import com.group18.gosell.main.wishlist.WishlistViewModel
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 
@@ -30,6 +31,7 @@ fun AppNavigation() {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = viewModel()
     val notificationViewModel: NotificationViewModel = viewModel()
+    val wishlistViewModel: WishlistViewModel = viewModel()
     val authState by authViewModel.authState.collectAsState()
 
     val startDestination = remember(authState) {
@@ -56,7 +58,8 @@ fun AppNavigation() {
                 MainScreen(
                     mainNavController = navController,
                     authViewModel = authViewModel,
-                    notificationViewModel = notificationViewModel
+                    notificationViewModel = notificationViewModel,
+                    wishlistViewModel = wishlistViewModel
                 )
             }
         }
