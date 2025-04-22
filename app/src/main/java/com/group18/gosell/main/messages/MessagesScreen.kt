@@ -50,7 +50,7 @@ import com.group18.gosell.navigation.Screen
 import com.group18.gosell.ui.theme.GoSellColorSecondary
 import com.group18.gosell.ui.theme.GoSellTextSecondary
 import com.group18.gosell.ui.theme.GosellTheme
-import com.group18.myapplication.R
+import com.group18.gosell.R
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

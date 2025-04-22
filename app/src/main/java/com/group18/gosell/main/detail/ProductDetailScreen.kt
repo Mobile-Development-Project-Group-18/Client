@@ -64,7 +64,7 @@ import com.group18.gosell.ui.theme.GoSellIconTint
 import com.group18.gosell.ui.theme.GoSellRed
 import com.group18.gosell.ui.theme.GoSellTextSecondary
 import com.group18.gosell.ui.theme.GosellTheme
-import com.group18.myapplication.R
+import com.group18.gosell.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

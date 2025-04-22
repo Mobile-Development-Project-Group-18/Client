@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Checkroom
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Home
@@ -39,6 +40,7 @@ import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -47,9 +49,12 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -67,6 +72,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.group18.gosell.data.model.Product
@@ -77,10 +83,12 @@ import com.group18.gosell.ui.theme.GoSellColorSecondary
 import com.group18.gosell.ui.theme.GoSellIconTint
 import com.group18.gosell.ui.theme.GoSellRed
 import com.group18.gosell.ui.theme.GoSellTextSecondary
-import com.group18.myapplication.R
+import com.group18.gosell.ui.theme.GosellTheme
+import com.group18.gosell.R
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.group18.gosell.main.notification.NotificationViewModel
 
 data class CategoryItemData(val name: String, val icon: ImageVector)
 
@@ -90,12 +98,14 @@ fun HomeScreen(
     homeViewModel: HomeViewModel,
     mainNavController: NavHostController,
     modifier: Modifier = Modifier,
-    wishlistViewModel: WishlistViewModel
+    wishlistViewModel: WishlistViewModel,
+    notificationViewModel: NotificationViewModel = viewModel()
 ) {
     val products by homeViewModel.products.collectAsState()
     val isLoading by homeViewModel.isLoading.collectAsState()
     val error by homeViewModel.error.collectAsState()
     val wishlistItems by wishlistViewModel.wishlistItems.collectAsState()
+    val notificationState by notificationViewModel.uiState.collectAsState() // Get notification state
 
     // --- SEARCH STATE ---
     var searchQuery by remember { mutableStateOf("") }
@@ -271,42 +281,61 @@ fun HomeScreen(
                                         searchQuery = ""
                                         isSearching = false
                                     }) {
-                                        Icon(Icons.Default.FilterList, contentDescription = "Close Search")
+                                        // Use Close icon or similar if needed, FilterList was likely a mistake here
+                                        Icon(Icons.Default.Close, contentDescription = "Close Search")
                                     }
-                                }
+                                },
+                                // Add appropriate colors for the search field
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = Color.Transparent,
+                                    unfocusedBorderColor = Color.Transparent,
+                                    cursorColor = MaterialTheme.colorScheme.primary
+                                )
                             )
                         } else {
                             Text("Gosell", fontWeight = FontWeight.Bold)
                         }
                     },
                     actions = {
-                        IconButton(onClick = { isSearching = !isSearching }) {
-                            Icon(
-                                Icons.Filled.Search,
-                                contentDescription = "Search Items",
-                                tint = GoSellIconTint
-                            )
-                        }
-                        // Add notifications from feat/notifications branch
-                        BadgedBox(
-                            badge = { Badge { Text("3") } }
-                        ) {
-                            IconButton(onClick = { /* TODO: Handle notifications */ }) {
+                        if (!isSearching) {
+                            IconButton(onClick = { isSearching = true }) {
                                 Icon(
-                                    Icons.Default.NotificationsNone,
-                                    contentDescription = "Notifications",
+                                    Icons.Filled.Search,
+                                    contentDescription = "Search Items",
+                                    tint = GoSellIconTint
+                                )
+                            }
+                            // Use the mainNavController to navigate to Notifications screen
+                            IconButton(onClick = { mainNavController.navigate(Screen.Notifications.route) }) {
+                                BadgedBox(
+                                    badge = { 
+                                        if (notificationState.unreadCount > 0) {
+                                            Badge { 
+                                                Text(notificationState.unreadCount.toString()) 
+                                            } 
+                                        }
+                                    }
+                                ) {
+                                    Icon(
+                                        Icons.Default.NotificationsNone,
+                                        contentDescription = "Notifications",
+                                        tint = GoSellIconTint
+                                    )
+                                }
+                            }
+                            IconButton(onClick = { showSortDialog = true }) {
+                                Icon(
+                                    Icons.Filled.FilterList,
+                                    contentDescription = "Filter Items",
                                     tint = GoSellIconTint
                                 )
                             }
                         }
-                        IconButton(onClick = { showSortDialog = true }) {
-                            Icon(
-                                Icons.Filled.FilterList,
-                                contentDescription = "Filter Items",
-                                tint = GoSellIconTint
-                            )
-                        }
-                    }
+                    },
+                    // Set background color for the TopAppBar
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background
+                    )
                 )
             },
             content = { paddingValues ->
@@ -383,7 +412,7 @@ fun HomeScreen(
                                         }
                                     }
                                 }
-                            } else if (products.isEmpty() && !isLoading) {
+                            } else if (products.isEmpty()) {
                                 item(span = {
                                     androidx.compose.foundation.lazy.grid.GridItemSpan(
                                         maxLineSpan
@@ -398,7 +427,6 @@ fun HomeScreen(
                                 // Sort products based on sortOption
                                 // Filtering, searching, and sorting logic
                                 val filteredAndSortedProducts = products
-                                    // 1. Search filter
                                     .filter { product ->
                                         if (searchQuery.isBlank()) true
                                         else {
@@ -406,7 +434,6 @@ fun HomeScreen(
                                             product.name.lowercase().contains(q) || (product.description?.lowercase()?.contains(q) ?: false)
                                         }
                                     }
-                                    // 2. Apply sort/filter
                                     .let { list ->
                                         when {
                                             mainSortType == "Category" && selectedCategory != null ->
