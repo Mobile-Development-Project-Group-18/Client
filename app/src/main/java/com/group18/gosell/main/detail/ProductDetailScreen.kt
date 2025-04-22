@@ -1,5 +1,6 @@
 package com.group18.gosell.main.detail
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -42,6 +43,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,6 +60,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
 import com.group18.gosell.data.model.formatPrice
+import com.group18.gosell.main.home.HomeScreen
 import com.group18.gosell.navigation.Screen
 import com.group18.gosell.ui.theme.GoSellColorSecondary
 import com.group18.gosell.ui.theme.GoSellIconTint
@@ -73,6 +76,7 @@ fun ProductDetailScreen(
     productId: String?,
     viewModel: ProductDetailViewModel = viewModel()
 ) {
+    Log.d("ProductScreenDebug", "ProductDetailScreen loaded")
     val uiState by viewModel.uiState.collectAsState()
     val product = uiState.product
     val seller = uiState.seller
@@ -100,6 +104,16 @@ fun ProductDetailScreen(
             val otherUserId = seller?.id ?: "unknown"
             navController.navigate(Screen.ChatDetail.createRoute(chatId, otherUserId))
             viewModel.onChatNavigationComplete()
+        }
+    }
+
+    LaunchedEffect(productId) {
+        productId?.let { viewModel.fetchProductDetails(it) }
+    }
+
+    LaunchedEffect(uiState.productDeleted) {
+        if (uiState.productDeleted) {
+            navController.navigate(Screen.Home)
         }
     }
 
@@ -176,6 +190,33 @@ fun ProductDetailScreen(
                             modifier = Modifier.weight(1f).padding(start = 4.dp)
                         ) {
                             Text("Send Offer")
+                        }
+                    }
+                }
+                if (product != null && seller != null && seller.id == currentUserId){
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Button(
+                            onClick = { navController.navigate(Screen.EditProduct.createRoute(productId = uiState.product?.id ?: "")) },
+                            modifier = Modifier.weight(1f).padding(end = 4.dp)
+                        ) {
+                            Spacer(Modifier.width(8.dp))
+                            Text("Edit Product")
+                        }
+
+                        Button(
+                            onClick = {
+                                val productId = uiState.product?.id
+                                if (productId != null) {
+                                    viewModel.deleteProduct(productId)
+                                }
+                            },
+                            modifier = Modifier.weight(1f).padding(start = 4.dp)
+                        ) {
+                            Text("Delete Product")
                         }
                     }
                 }
@@ -369,7 +410,6 @@ fun ProductDetailScreen(
         }
     }
 }
-
 
 private fun formatTimestampRelative(timestamp: Long?): String {
     if (timestamp == null || timestamp == 0L) return "N/A"

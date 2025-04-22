@@ -23,6 +23,7 @@ import com.group18.gosell.main.notification.NotificationScreen
 import com.group18.gosell.main.notification.NotificationViewModel
 import com.group18.gosell.main.offer.SendOfferScreen
 import com.group18.gosell.main.wishlist.WishlistViewModel
+import com.group18.gosell.ui.screens.EditProductScreen
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 
@@ -125,6 +126,17 @@ fun AppNavigation() {
                 )
             }
         }
+
+        composable(
+            route = Screen.EditProduct.route,
+            arguments = listOf(navArgument("productId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            if (authState == AuthViewModel.AuthenticationState.AUTHENTICATED) {
+                val productId = backStackEntry.arguments?.getString("productId")
+                EditProductScreen(productId = productId, navController = navController)
+            }
+        }
+
     }
 
     LaunchedEffect(authState, navController) {
