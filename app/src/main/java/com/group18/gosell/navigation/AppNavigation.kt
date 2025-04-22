@@ -1,5 +1,6 @@
 package com.group18.gosell.navigation
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -10,6 +11,7 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.group18.gosell.auth.AuthViewModel
@@ -35,11 +37,23 @@ fun AppNavigation() {
     val wishlistViewModel: WishlistViewModel = viewModel()
     val authState by authViewModel.authState.collectAsState()
 
+    // Keep track of current route for back handling
+    val currentBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = currentBackStackEntry?.destination?.route
+
     val startDestination = remember(authState) {
         when (authState) {
             AuthViewModel.AuthenticationState.AUTHENTICATED -> Screen.Main.route
             AuthViewModel.AuthenticationState.UNAUTHENTICATED -> Screen.Login.route
             else -> Screen.Login.route
+        }
+    }
+
+    // Handle back press - navigate to Main if not already there
+    BackHandler(enabled = currentRoute != Screen.Main.route && currentRoute != Screen.Login.route) {
+        navController.navigate(Screen.Main.route) {
+            popUpTo(Screen.Main.route) { inclusive = false }
+            launchSingleTop = true
         }
     }
 

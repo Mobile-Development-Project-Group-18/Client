@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -35,7 +34,7 @@ import com.group18.gosell.ui.theme.GoSellColorSecondary
 import com.group18.gosell.ui.theme.GoSellIconTint
 import com.group18.gosell.ui.theme.GoSellTextSecondary
 import com.group18.gosell.ui.theme.GosellTheme
-import com.group18.myapplication.R
+import com.group18.gosell.R
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -67,11 +66,7 @@ fun ProfileScreen(
             topBar = {
                 TopAppBar(
                     title = { Text("") },
-                    navigationIcon = {
-                        IconButton(onClick = { mainNavController.popBackStack() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                    },
+                    // Removed the back button since it's redundant with bottom nav
                     actions = {
                         IconButton(onClick = { authViewModel.logout() }) {
                             Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Logout", tint = MaterialTheme.colorScheme.error)
