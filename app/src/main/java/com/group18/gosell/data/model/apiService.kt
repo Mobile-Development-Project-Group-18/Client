@@ -2,9 +2,11 @@ package com.group18.gosell.data.model
 
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.HTTP
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 
 interface apiService {
@@ -34,4 +36,10 @@ interface apiService {
 
     @GET("/users/{userId}")
     suspend fun getUserById(@Path("userId") userId: String): Response<User>
+
+    @PUT("/products/{productId}")
+    suspend fun updateProduct(@Path("productId") productId: String, @Body product: Product): Response<Product>
+
+    @DELETE("/products/{productId}")
+    suspend fun deleteProduct(@Path("productId") productId: String): Response<Unit>
 }

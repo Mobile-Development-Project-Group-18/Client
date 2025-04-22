@@ -21,7 +21,8 @@ data class ProductDetailState(
     val error: String? = null,
     val isInWishlist: Boolean = false,
     val navigateToChatId: String? = null,
-    val isChatLoading: Boolean = false
+    val isChatLoading: Boolean = false,
+    val productDeleted: Boolean = false
 )
 
 class ProductDetailViewModel : ViewModel() {
@@ -68,8 +69,7 @@ class ProductDetailViewModel : ViewModel() {
                     false
                 }
 
-
-
+                //Get seller
                 var seller: User? = null
                 if (product.sellerId.isNotBlank() && product.sellerId != currentUser?.uid) {
                     try {
@@ -85,7 +85,15 @@ class ProductDetailViewModel : ViewModel() {
                         println("Warning: Could not fetch seller info for product $productId: ${e.message}")
                     }
                 } else if (product.sellerId == currentUser?.uid) {
-                    seller = currentUserData
+                    try {
+                        val response = api.getUserById(product.sellerId)
+                        if (response.isSuccessful) {
+                            val user = response.body()
+                            seller = user?.copy(id = product.sellerId)
+                        }
+                    } catch (e: Exception) {
+                        println("Warning: Could not fetch current user info as seller for product $productId: ${e.message}")
+                    }
                 }
 
 
@@ -207,5 +215,55 @@ class ProductDetailViewModel : ViewModel() {
     fun onChatNavigationComplete() {
         _uiState.value = _uiState.value.copy(navigateToChatId = null)
     }
+
+    fun editProduct(updatedProduct: Product) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            try {
+                val response = api.updateProduct(updatedProduct.id, updatedProduct)
+                if (response.isSuccessful) {
+                    Log.d("EditProduct", "success")
+                    val product = response.body()
+                    _uiState.value = _uiState.value.copy(
+                        product = product,
+                        isLoading = false
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        error = "Failed to update product: ${response.message()}",
+                        isLoading = false
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = "Error updating product: ${e.localizedMessage}",
+                    isLoading = false
+                )
+            }
+        }
+    }
+
+    fun deleteProduct(productId: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            try {
+                val response = api.deleteProduct(productId)
+                if (response.isSuccessful) {
+                    _uiState.value = _uiState.value.copy(isLoading = false, productDeleted = true)
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        error = "Failed to delete product: ${response.message()}",
+                        isLoading = false
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = "Error deleting product: ${e.localizedMessage}",
+                    isLoading = false
+                )
+            }
+        }
+    }
+
 
 }
